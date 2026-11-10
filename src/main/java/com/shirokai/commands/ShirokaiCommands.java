@@ -32,6 +32,8 @@ public final class ShirokaiCommands implements ModInitializer {
           FabricLoader.getInstance().getConfigDir().resolve("shirokai-commands.json"));
   private volatile CommandConfig config = new CommandConfig();
   private volatile CommandRuleEngine engine = new CommandRuleEngine(config);
+  private volatile TabSuggestionFilter argumentSuggestions =
+      new TabSuggestionFilter(config.tabFilters);
   private final LuckPermsBridge permissions = new LuckPermsBridge();
   private final AliasManager aliases = new AliasManager();
   private final TabRefreshManager tabs = new TabRefreshManager();
@@ -261,7 +263,8 @@ public final class ShirokaiCommands implements ModInitializer {
     for (var s : suggestions.getList()) {
       String candidate = s.apply(input);
       if (input.startsWith("/")) candidate = CommandPath.fromUser(candidate);
-      if (visible(source, candidate)) kept.add(s);
+      if (visible(source, candidate)
+          && argumentSuggestions.visible(decision(source, candidate).expanded())) kept.add(s);
     }
     return new Suggestions(suggestions.getRange(), kept);
   }
@@ -270,6 +273,7 @@ public final class ShirokaiCommands implements ModInitializer {
     aliases.install(next, server.getCommandManager().getDispatcher());
     config = next;
     engine = new CommandRuleEngine(next);
+    argumentSuggestions = new TabSuggestionFilter(next.tabFilters);
     indexRoutes();
     tabs.refresh(server);
   }

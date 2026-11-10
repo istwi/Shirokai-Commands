@@ -36,6 +36,7 @@ src/main/java/com/shirokai/commands/config/ConfigManager.java
 src/main/java/com/shirokai/commands/filter/CommandFilter.java
 src/main/java/com/shirokai/commands/filter/CommandRuleEngine.java
 src/main/java/com/shirokai/commands/filter/TabRefreshManager.java
+src/main/java/com/shirokai/commands/filter/TabSuggestionFilter.java
 src/main/java/com/shirokai/commands/logging/CommandAuditLogger.java
 src/main/java/com/shirokai/commands/mixin/CommandManagerMixin.java
 src/main/java/com/shirokai/commands/mixin/CommandNodeAccessor.java
@@ -50,6 +51,7 @@ src/test/java/com/shirokai/commands/BrigadierTest.java
 src/test/java/com/shirokai/commands/CommandPathTest.java
 src/test/java/com/shirokai/commands/LuckPermsPermissionTest.java
 src/test/java/com/shirokai/commands/PolicyTest.java
+src/test/java/com/shirokai/commands/TabSuggestionFilterTest.java
 ```
 
 Artefatos gerados ficam em `build/libs/`; caches e mundos de teste são ignorados pelo Git.

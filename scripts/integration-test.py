@@ -27,7 +27,7 @@ commands = {
     'sctsecond': {'mode': 'replace', 'alias': 'sctgroup second'},
 }
 config.write_text(json.dumps({'configVersion': 1, 'settings': {'opBypass': True},
-                              'messages': {}, 'commands': commands}, indent=2))
+                              'messages': {}, 'commands': commands, 'tabFilters': [{'command': 'sctpay', 'argumentIndex': 3, 'hidePrefixes': ['impactor:']}] }, indent=2))
 (run / 'eula.txt').write_text('eula=true\n')
 (run / 'server.properties').write_text('online-mode=false\nserver-ip=127.0.0.1\nserver-port=25575\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\nlevel-type=minecraft:flat\ngenerator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}\ngenerate-structures=false\nmax-tick-time=120000\n')
 result = run / 'test-result.txt'

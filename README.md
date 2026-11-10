@@ -91,6 +91,26 @@ Use aspas em caminhos com espaços. `remove` aceita o caminho exato ou seu ID de
 
 Alterações só são confirmadas depois da gravação; outra alteração concorrente é recusada enquanto houver uma gravação pendente. O TAB é reenviado após alteração/reload. A opção `autoRefreshTab` controla os eventos automáticos de permissões e mudança de mundo; reload administrativo sempre atualiza.
 
+## Ocultar moedas com namespace nas sugestões
+
+As opções `impactor:cash` e `impactor:tokens` dentro de `/pay` são **argumentos**, não comandos. Para manter somente as formas curtas nas sugestões de `/pay <valor> <jogador> <moeda>`, adicione na raiz de `config/shirokai-commands.json` (fora de `settings` e `commands`):
+
+```json
+"tabFilters": [
+  {
+    "command": "pay",
+    "argumentIndex": 3,
+    "hidePrefixes": ["impactor:"]
+  }
+]
+```
+
+Execute `/sc reload` e reabra o chat. O filtro remove as sugestões que começam com `impactor:` na terceira posição de argumento; preserva `cash`, `tokens` e outras formas curtas já fornecidas pelo Impactor. Ele **não renomeia moedas**, não altera saldos/permissões e não bloqueia digitar a forma completa manualmente. Não remova os IDs `impactor:...` da configuração de moedas do Impactor.
+
+`argumentIndex` começa em 1 após o caminho `command`. Para outro comando ou estrutura, configure outra entrada com a posição correspondente; um filtro de `pay` não afeta `give`, outros comandos nem nomes de jogadores na segunda posição. Também aceita caminhos como `economy pay`. As sugestões de aliases são avaliadas com seu comando original expandido. O filtro é cosmético e vale inclusive para administradores com bypass. A lista padrão é vazia, mantendo as sugestões atuais até você ativá-lo.
+
+Essa função trata respostas de sugestões enviadas pelo servidor, portanto não exige módulo cliente. Sugestões criadas inteiramente por um mod local continuam fora do controle do servidor.
+
 ## Comandos com duas barras (WorldEdit)
 
 Use a notação completa do chat nos comandos administrativos:

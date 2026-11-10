@@ -34,5 +34,14 @@
     "kit admin": {
       "mode": "block"
     }
-  }
+  },
+  "tabFilters": [
+    {
+      "command": "pay",
+      "argumentIndex": 3,
+      "hidePrefixes": [
+        "impactor:"
+      ]
+    }
+  ]
 }

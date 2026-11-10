@@ -7,6 +7,14 @@ public final class CommandConfig {
   public Settings settings = new Settings();
   public Messages messages = new Messages();
   public Map<String, Rule> commands = new LinkedHashMap<>();
+  public List<TabFilter> tabFilters = new ArrayList<>();
+
+  /** Cosmetic suggestion filters; argumentIndex counts from one after the command path. */
+  public static class TabFilter {
+    public String command;
+    public int argumentIndex;
+    public List<String> hidePrefixes = new ArrayList<>();
+  }
 
   public static class Settings {
     public boolean opBypass = true,

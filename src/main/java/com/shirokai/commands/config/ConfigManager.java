@@ -39,7 +39,8 @@ public final class ConfigManager {
         || c.configVersion != 1
         || c.settings == null
         || c.messages == null
-        || c.commands == null)
+        || c.commands == null
+        || c.tabFilters == null)
       throw new IllegalArgumentException(
           "Expected configVersion 1, settings, messages and commands");
     if (!Set.of("allow", "block").contains(c.settings.defaultMode))
@@ -49,6 +50,21 @@ public final class ConfigManager {
         || c.messages.reload == null
         || c.messages.aliasConflict == null)
       throw new IllegalArgumentException("Messages cannot be null");
+    for (var filter : c.tabFilters) {
+      if (filter == null
+          || filter.command == null
+          || filter.command.isBlank()
+          || !filter.command.equals(filter.command.strip())
+          || !filter.command.equals(CommandPath.canonical(filter.command))
+          || filter.argumentIndex < 1
+          || filter.argumentIndex > 64
+          || filter.hidePrefixes == null
+          || filter.hidePrefixes.isEmpty()
+          || filter.hidePrefixes.stream().anyMatch(prefix -> prefix == null || prefix.isEmpty()))
+        throw new IllegalArgumentException(
+            "Invalid tabFilter: specify native command, argumentIndex (1..64), and nonempty"
+                + " hidePrefixes");
+    }
     Set<String> aliases = new HashSet<>();
     Set<String> ids = new HashSet<>();
     for (var e : c.commands.entrySet()) {

@@ -16,6 +16,7 @@ import net.minecraft.network.ClientConnection;
 import net.minecraft.network.NetworkSide;
 import net.minecraft.network.packet.Packet;
 import net.minecraft.network.packet.c2s.common.SyncedClientOptions;
+import net.minecraft.network.packet.s2c.play.CommandSuggestionsS2CPacket;
 import net.minecraft.network.packet.s2c.play.CommandTreeS2CPacket;
 import net.minecraft.server.MinecraftServer;
 import net.minecraft.server.network.*;
@@ -106,6 +107,30 @@ public class DedicatedServerTests implements ModInitializer {
                       }));
           d.register(literal("/scthidden").executes(c -> 31));
           d.register(literal("/sctoriginal").executes(c -> 32));
+          d.register(
+              literal("sctpay")
+                  .then(
+                      argument(
+                              "amount",
+                              com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                          .then(
+                              argument("target", StringArgumentType.word())
+                                  .then(
+                                      argument("currency", StringArgumentType.greedyString())
+                                          .suggests(
+                                              (ctx, b) ->
+                                                  b.suggest("cash")
+                                                      .suggest("impactor:cash")
+                                                      .suggest("tokens")
+                                                      .suggest("impactor:tokens")
+                                                      .suggest("impactor:dollars")
+                                                      .buildFuture())
+                                          .executes(
+                                              ctx ->
+                                                  StringArgumentType.getString(ctx, "currency")
+                                                          .equals("impactor:cash")
+                                                      ? 43
+                                                      : 44)))));
           d.register(literal("sctfirst").executes(c -> 11));
           d.register(literal("sctsecond").executes(c -> 12));
           d.register(
@@ -286,6 +311,28 @@ public class DedicatedServerTests implements ModInitializer {
     check(
         mod.decision(server.getCommandSource(), "sctblocked").execute(),
         "Console remains unrestricted");
+    String payInput = "/sctpay 10 a ";
+    handler.onRequestCommandCompletions(
+        new net.minecraft.network.packet.c2s.play.RequestCommandCompletionsC2SPacket(71, payInput));
+    check(
+        handler.completion != null,
+        "Argument suggestions packet generated through real network handler");
+    var currencies =
+        handler.completion.getSuggestions().getList().stream()
+            .map(com.mojang.brigadier.suggestion.Suggestion::getText)
+            .collect(java.util.stream.Collectors.toSet());
+    check(
+        currencies.equals(Set.of("cash", "tokens")),
+        "Only plain currencies survive configured argument filter");
+    check(
+        handler.completion.start() == payInput.length(),
+        "Currency suggestion replacement range preserved");
+    check(
+        dispatcher.execute("sctpay 10 a impactor:cash", source) == 43,
+        "Hidden namespaced currency still manually executable");
+    check(
+        dispatcher.execute("sctpay 10 a cash", source) == 44,
+        "Plain currency still manually executable");
     int beforeInternal = executions;
     server.getCommandManager().executeWithPrefix(source, "sctblocked");
     check(executions == beforeInternal + 1, "Internal player command untouched by default");
@@ -353,6 +400,7 @@ public class DedicatedServerTests implements ModInitializer {
 
   private static class RecordingHandler extends ServerPlayNetworkHandler {
     CommandTreeS2CPacket tree;
+    CommandSuggestionsS2CPacket completion;
 
     RecordingHandler(MinecraftServer s, ServerPlayerEntity p) {
       super(
@@ -365,6 +413,7 @@ public class DedicatedServerTests implements ModInitializer {
     @Override
     public void sendPacket(Packet<?> packet) {
       if (packet instanceof CommandTreeS2CPacket t) tree = t;
+      if (packet instanceof CommandSuggestionsS2CPacket p) completion = p;
     }
   }
 }
