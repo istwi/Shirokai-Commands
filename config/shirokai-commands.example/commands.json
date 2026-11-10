@@ -1,0 +1,13 @@
+{
+  "commands": {
+    "calculate": {
+      "mode": "hide"
+    },
+    "center": {
+      "mode": "block"
+    },
+    "kit admin": {
+      "mode": "block"
+    }
+  }
+}

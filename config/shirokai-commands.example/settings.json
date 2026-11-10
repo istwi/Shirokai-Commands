@@ -1,0 +1,13 @@
+{
+  "configVersion": 1,
+  "settings": {
+    "opBypass": true,
+    "defaultMode": "allow",
+    "whitelistEnabled": false,
+    "autoRefreshTab": true,
+    "luckPermsIntegration": true,
+    "logBlockedCommands": true,
+    "silentBlockedCommands": false,
+    "guardInternalPlayerCommands": false
+  }
+}

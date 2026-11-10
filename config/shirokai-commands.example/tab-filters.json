@@ -1,0 +1,21 @@
+{
+  "tabFilters": [
+    {
+      "command": "pay",
+      "argumentIndex": 2,
+      "onlinePlayersOnly": true
+    },
+    {
+      "command": "pay",
+      "argumentIndex": 3,
+      "hidePrefixes": [
+        "impactor:"
+      ]
+    },
+    {
+      "command": "pay",
+      "argumentIndex": 4,
+      "hideAll": true
+    }
+  ]
+}

@@ -29,6 +29,7 @@ public final class ShirokaiCommands implements ModInitializer {
   private static ShirokaiCommands instance;
   private final ConfigManager configs =
       new ConfigManager(
+          FabricLoader.getInstance().getConfigDir().resolve("shirokai-commands"),
           FabricLoader.getInstance().getConfigDir().resolve("shirokai-commands.json"));
   private volatile CommandConfig config = new CommandConfig();
   private volatile CommandRuleEngine engine = new CommandRuleEngine(config);

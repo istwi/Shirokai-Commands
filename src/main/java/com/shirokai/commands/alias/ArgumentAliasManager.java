@@ -40,14 +40,30 @@ public final class ArgumentAliasManager {
       if (root != null) {
         if (!(root instanceof LiteralCommandNode)
             || !t.spec().extendExisting
-            || t.prefix().size() < 2
             || root.getRedirect() != null)
           throw new IllegalArgumentException(
               "argumentAliases."
                   + t.id()
-                  + ": existing root requires extendExisting and a new literal child: "
+                  + ": existing root requires extendExisting and an unambiguous new route: "
                   + t.root());
-        if (root.getChild(t.prefix().get(1)) != null)
+        if (t.prefix().size() == 1) {
+          if (t.names().isEmpty()
+              || root.getChildren().stream().anyMatch(n -> n instanceof ArgumentCommandNode)
+              || root.getChild(t.argumentLabel()) != null)
+            throw new IllegalArgumentException(
+                "argumentAliases."
+                    + t.id()
+                    + ": existing root already has a conflicting argument or label");
+          if (t.targetRoot().equals(t.root())) {
+            var fixed = ArgumentTemplate.parse(t.fixedTargetPrefix());
+            if (fixed.size() < 2
+                || !(root.getChild(fixed.get(1).value()) instanceof LiteralCommandNode))
+              throw new IllegalArgumentException(
+                  "argumentAliases."
+                      + t.id()
+                      + ": default route must target an original literal subcommand");
+          }
+        } else if (root.getChild(t.prefix().get(1)) != null)
           throw new IllegalArgumentException(
               "argumentAliases."
                   + t.id()
@@ -137,6 +153,15 @@ public final class ArgumentAliasManager {
 
   public ArgumentTemplate.Match match(String input) {
     for (var t : templates) {
+      var owner = owned.get(t.root());
+      if (t.prefix().size() == 1 && owner != null && owner.original != null) {
+        var tokens = ArgumentTemplate.parse(input);
+        // Original root execution and literal subcommands always win over a default alias.
+        if (tokens != null
+            && (tokens.size() <= 1
+                || owner.original.getChild(tokens.get(1).value()) instanceof LiteralCommandNode))
+          continue;
+      }
       var match = t.match(input);
       if (match != null) return match;
     }

@@ -28,7 +28,7 @@ public class DedicatedServerTests implements ModInitializer {
   private ServerPlayerEntity player;
   private MinecraftServer server;
   private boolean failed;
-  private String echoed;
+  private String echoed, lastHome;
   private int paidAmount;
   private String paidTarget, paidCurrency, rawItem;
   private net.minecraft.server.command.ServerCommandSource payer;
@@ -185,6 +185,23 @@ public class DedicatedServerTests implements ModInitializer {
                                                 .toString();
                                         return 49;
                                       }))));
+          d.register(
+              literal("scthome")
+                  .executes(ctx -> 50)
+                  .then(
+                      literal("tp")
+                          .then(
+                              argument("name", StringArgumentType.word())
+                                  .suggests(
+                                      (ctx, b) -> b.suggest("base").suggest("farm").buildFuture())
+                                  .executes(
+                                      ctx -> {
+                                        lastHome = StringArgumentType.getString(ctx, "name");
+                                        return 51;
+                                      })))
+                  .then(
+                      literal("set")
+                          .then(argument("name", StringArgumentType.word()).executes(ctx -> 52))));
           d.register(literal("sctaliaspay").redirect(pay));
           d.register(literal("economy:sctpay").redirect(pay));
           d.register(literal("scteconomy").then(literal("pay").redirect(pay)));
@@ -259,6 +276,13 @@ public class DedicatedServerTests implements ModInitializer {
             SyncedClientOptions.createDefault());
     handler = new RecordingHandler(server, player);
     player.networkHandler = handler;
+    check(
+        Files.isRegularFile(Path.of("config/shirokai-commands/settings.json"))
+            && Files.isRegularFile(Path.of("config/shirokai-commands/aliases.json")),
+        "Legacy JSON is migrated to split configuration files");
+    check(
+        Files.isRegularFile(Path.of("config/shirokai-commands.json")),
+        "Migration preserves original legacy file");
     var mod = ShirokaiCommands.get();
     var source = player.getCommandSource();
     check(!mod.isAdmin(source, "shirokaicommands.admin"), "Player admin denied");
@@ -564,6 +588,25 @@ public class DedicatedServerTests implements ModInitializer {
           "Explicit HIDE on named alias input route stays executable and invisible");
       invoke("sctroutehidden 456");
       check(paidAmount == 456, "Hidden named alias manually executes original target");
+      check(
+          dispatcher.execute("scthome base", source) == 51 && lastHome.equals("base"),
+          "Default root argument routes into original subcommand");
+      check(
+          dispatcher.execute("scthome", source) == 50 && !mod.decision(source, "scthome").alias(),
+          "Original bare-root execution preserved");
+      check(
+          !mod.decision(source, "scthome set").alias()
+              && dispatcher.execute("scthome set base", source) == 52,
+          "Original literal subcommands take priority over default alias");
+      check(
+          dispatcher.execute("scthome tp farm", source) == 51 && lastHome.equals("farm"),
+          "Original explicit teleport syntax preserved");
+      check(
+          requestSuggestions("/scthome ").getList().stream()
+              .map(v -> v.getText())
+              .collect(java.util.stream.Collectors.toSet())
+              .containsAll(Set.of("tp", "set", "base", "farm")),
+          "Default root suggestions include original literals and target argument values");
       int oldAmount = paidAmount;
       try {
         dispatcher.execute("sctpay cash invalid Alice", source);
@@ -652,9 +695,9 @@ public class DedicatedServerTests implements ModInitializer {
       check(!mod.decision(source, "sctvisible").execute(), "Whitelist blocks unspecified command");
       check(mod.decision(source, "scthidden").execute(), "Whitelist preserves HIDE execution");
       check(
-          Files.exists(Path.of("config/shirokai-commands.json.bak")),
+          Files.exists(Path.of("config/shirokai-commands/settings.json.bak")),
           "Administrative backup created");
-      var file = Path.of("config/shirokai-commands.json");
+      var file = Path.of("config/shirokai-commands/settings.json");
       String json = Files.readString(file);
       Files.writeString(
           file, json.replace("\"whitelistEnabled\": true", "\"whitelistEnabled\": false"));
@@ -663,7 +706,7 @@ public class DedicatedServerTests implements ModInitializer {
       ticks = 0;
     } else if (stage == 2 && !mod.config().settings.whitelistEnabled) {
       check(mod.decision(source, "sctvisible").execute(), "Reload applies new config");
-      Files.writeString(Path.of("config/shirokai-commands.json"), "{invalid");
+      Files.writeString(Path.of("config/shirokai-commands/settings.json"), "{invalid");
       mod.reload(server.getCommandSource());
       stage = 3;
       ticks = 0;
@@ -671,8 +714,8 @@ public class DedicatedServerTests implements ModInitializer {
       check(
           mod.decision(source, "sctvisible").execute(), "Invalid JSON preserves last valid config");
       Files.copy(
-          Path.of("config/shirokai-commands.json.bak"),
-          Path.of("config/shirokai-commands.json"),
+          Path.of("config/shirokai-commands/settings.json.bak"),
+          Path.of("config/shirokai-commands/settings.json"),
           StandardCopyOption.REPLACE_EXISTING);
       server
           .getCommandManager()

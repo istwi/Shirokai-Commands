@@ -1,0 +1,38 @@
+{
+  "prefixAliases": {
+    "balance": {
+      "mode": "replace",
+      "alias": "money"
+    },
+    "warp spawn": {
+      "mode": "replace",
+      "alias": "spawn"
+    }
+  },
+  "argumentAliases": {
+    "pay_cash": {
+      "alias": "pay cash {quantidade} {jogador}",
+      "target": "pay {quantidade} {jogador} cash",
+      "extendExisting": true,
+      "argumentLabel": "quantidade_jogador"
+    },
+    "pay_dollars": {
+      "alias": "pay dollars {quantidade} {jogador}",
+      "target": "pay {quantidade} {jogador} dollars",
+      "extendExisting": true,
+      "argumentLabel": "quantidade_jogador"
+    },
+    "pay_tokens": {
+      "alias": "pay tokens {quantidade} {jogador}",
+      "target": "pay {quantidade} {jogador} tokens",
+      "extendExisting": true,
+      "argumentLabel": "quantidade_jogador"
+    },
+    "home_tp": {
+      "alias": "home {nome}",
+      "target": "home tp {nome}",
+      "extendExisting": true,
+      "argumentLabel": "nome"
+    }
+  }
+}

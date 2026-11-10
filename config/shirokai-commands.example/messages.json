@@ -1,0 +1,8 @@
+{
+  "messages": {
+    "blocked": "§cVocê não tem permissão para usar este comando.",
+    "unknown": "§cComando desconhecido.",
+    "reload": "§aConfigurações recarregadas com sucesso.",
+    "aliasConflict": "§cEste alias já está sendo utilizado."
+  }
+}

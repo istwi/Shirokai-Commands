@@ -14,6 +14,8 @@ Novo `argumentAliases` genérico com placeholders nomeados, reorganização de a
 
 Os rótulos de argumentos dos templates agora usam os nomes configurados em vez de `template_arguments`; `argumentLabel` permite personalização sem alterar a execução.
 
+Configuração ativa dividida em cinco arquivos na pasta `config/shirokai-commands/`, com migração automática do JSON legado preservado, validação conjunta e recuperação transacional de salvamentos interrompidos. Suporte genérico a argumento padrão em raiz existente sem argumentos ambíguos, como `home {nome}` → `home tp {nome}`, preservando subcomandos originais.
+
 Implementação inicial para Fabric 1.21.1 / Java 21:
 
 - Políticas HIDE, BLOCK, REPLACE e ALLOW, whitelist e permissões por regra.

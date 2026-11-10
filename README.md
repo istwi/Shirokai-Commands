@@ -11,14 +11,14 @@ Versões usadas na compilação e nos testes: Fabric Loader **0.16.14**, Fabric 
 1. Prepare um servidor dedicado Fabric 1.21.1 com Java 21 e Fabric API.
 2. Coloque `shirokai-commands-1.0.0+1.21.1.jar` em `mods/` do servidor.
 3. Opcionalmente instale LuckPerms para Fabric compatível com essa versão.
-4. Inicie o servidor. O arquivo `config/shirokai-commands.json` será criado automaticamente com política permissiva e nenhuma regra.
+4. Inicie o servidor. A pasta `config/shirokai-commands/` será criada automaticamente com cinco arquivos JSON, política permissiva e nenhuma regra. Se existir o JSON antigo, seus dados serão migrados sem apagar o original.
 5. Configure regras pelo JSON ou pelos comandos administrativos. Teste com um jogador sem OP e sem bypass.
 
-O exemplo em [config/shirokai-commands.example.json](config/shirokai-commands.example.json) contém comandos de outros mods: só ative substituições quando seus comandos originais estiverem registrados. O arquivo não é copiado automaticamente para a configuração ativa.
+Os exemplos em [config/shirokai-commands.example/](config/shirokai-commands.example/) contêm comandos de outros mods: só ative substituições quando seus comandos originais estiverem registrados. Os exemplos não são copiados automaticamente para a configuração ativa. O JSON único `.example.json` permanece apenas como exemplo do formato legado.
 
 ## Aliases com argumentos nomeados e ordem personalizada
 
-Use a propriedade opcional `argumentAliases` na raiz do JSON. Ela é genérica: qualquer comando de destino registrado no Brigadier pode ser usado, sem dependência de Impactor. O mapa padrão é vazio. Exemplo para adicionar a sintaxe `/pay <moeda> <quantidade> <jogador>` sem remover a original:
+Use a propriedade opcional `argumentAliases` em `config/shirokai-commands/aliases.json`, ao lado de `prefixAliases`. Ela é genérica: qualquer comando de destino registrado no Brigadier pode ser usado, sem dependência de Impactor. O mapa padrão é vazio. Exemplo para adicionar a sintaxe `/pay <moeda> <quantidade> <jogador>` sem remover a original:
 
 ```json
 "argumentAliases": {
@@ -45,7 +45,7 @@ Assim `/pay cash 100 Alice` encaminha `pay 100 Alice cash` ao comando original, 
 - `alias` contém um prefixo de literais e depois argumentos `{nome}`. Cada nome deve aparecer uma única vez.
 - `argumentLabel` é opcional e muda apenas o rótulo mostrado no TAB. Sem ele, os nomes dos parâmetros são unidos por `_`: `{quantidade} {jogador}` aparece como `<quantidade_jogador>`. Exemplo: `"argumentLabel": "valor_jogador"`. Use de 1 a 64 letras, números, `_` ou `-`, sem escrever os sinais `< >`. Não modifica parâmetros, ordem, sugestões nem execução.
 - `target` começa com uma raiz fixa de comando original e pode reorganizar os mesmos `{nomes}`, cada um exatamente uma vez, com literais fixos entre eles.
-- `extendExisting: true` permite adicionar um novo subcomando literal a uma raiz existente. Não substitui a raiz nem seus argumentos originais. Como literais têm precedência sobre argumentos dinâmicos no Brigadier, escolha um prefixo que não represente um valor importante da sintaxe antiga. Um caminho já registrado, como `pay cash` se outro mod já o possuir, é rejeitado. Raízes com redirecionamento ou extensões sem um novo literal não são aceitas; use uma raiz nova nesses casos.
+- `extendExisting: true` permite adicionar um novo subcomando literal a uma raiz existente. Não substitui a raiz nem seus argumentos originais. Como literais têm precedência sobre argumentos dinâmicos no Brigadier, escolha um prefixo que não represente um valor importante da sintaxe antiga. Um caminho já registrado, como `pay cash` se outro mod já o possuir, é rejeitado. Uma rota padrão com argumento direto (como `/home {nome}`) também é aceita quando a raiz ainda não tem argumentos próprios. Literais originais e a execução da raiz sem argumentos têm prioridade. Se a raiz já tiver um argumento ou houver colisão com o rótulo escolhido, a configuração é rejeitada. Raízes com redirecionamento continuam não sendo extensíveis; use uma raiz nova nesse caso.
 - Os IDs, como `pay_cash`, são únicos e usam letras minúsculas, números, `_` ou `-`. A permissão adicional padrão é `shirokaicommands.alias.pay_cash`, permitida quando indefinida. `permission` pode configurar outro node. Bypass autorizado ignora essa permissão adicional, mas não as exigências originais do destino.
 
 Outra opção, com uma raiz nova e moeda como argumento:
@@ -72,6 +72,23 @@ A execução usa um snapshot da árvore de comandos original, com seus requisito
 
 Depois de instalar o jar atualizado, reinicie o servidor. Para alterar apenas o JSON, use `/sc reload`: alterações inválidas mantêm a configuração válida anterior. Use reload também após mudanças dinâmicas na árvore de comandos de outros mods. Estruturas especiais, alterações tardias de registro, forks personalizados e argumentos de chat assinados precisam de validação com o conjunto real de mods; o Shirokai não reassina mensagens. A compatibilidade instalada com Impactor 5.3.5 ainda não foi comprovada pelos testes locais.
 
+## Atalho padrão para um subcomando
+
+Em `config/shirokai-commands/aliases.json`, acrescente dentro de `argumentAliases`:
+
+```json
+"home_tp": {
+  "alias": "home {nome}",
+  "target": "home tp {nome}",
+  "extendExisting": true,
+  "argumentLabel": "nome"
+}
+```
+
+`/home MinhaCasa` executa `/home tp MinhaCasa`. Os literais originais, como `/home tp` e `/home set`, e o comportamento original de `/home` sem argumentos são preservados. O mod não interpreta esses literais como nomes de home. Uma home cujo nome coincida com um subcomando reservado precisa da sintaxe explícita (`/home tp set`, por exemplo).
+
+Esse mecanismo é genérico e não depende de um mod de homes. Por segurança, a raiz não pode já possuir um argumento dinâmico que torne o atalho ambíguo, e o destino deve ser uma rota original válida. Não é necessário recompilar para criar outros atalhos compatíveis: edite o JSON e use `/sc reload`.
+
 ## Modos e prioridade
 
 | Modo | TAB | Execução manual |
@@ -85,43 +102,34 @@ Ordem: proteção de `/sc` e `/shirokaicommands` contra regras; console; bypass 
 
 Uma permissão positiva **não anula BLOCK** nem concede o comando original de REPLACE. Para isso existe o bypass. Permissões individuais de comandos restringem ALLOW/REPLACE e permissões de alias restringem o alias. HIDE não é convertido em bloqueio por permissão da política; somente a permissão original do comando controla sua execução.
 
-## JSON
+## Arquivos JSON e migração
 
-```json
-{
-  "configVersion": 1,
-  "settings": {
-    "opBypass": true,
-    "defaultMode": "allow",
-    "whitelistEnabled": false,
-    "autoRefreshTab": true,
-    "luckPermsIntegration": true,
-    "logBlockedCommands": true,
-    "silentBlockedCommands": false,
-    "guardInternalPlayerCommands": false
-  },
-  "messages": {
-    "blocked": "§cVocê não tem permissão para usar este comando.",
-    "unknown": "§cComando desconhecido.",
-    "reload": "§aConfigurações recarregadas com sucesso.",
-    "aliasConflict": "§cEste alias já está sendo utilizado."
-  },
-  "commands": {
-    "calculate": {"mode": "hide"},
-    "center": {"mode": "block", "message": "§cUse os recursos do servidor."},
-    "balance": {"mode": "replace", "alias": "money"},
-    "warp spawn": {"mode": "replace", "alias": "spawn"},
-    "kit": {"mode": "allow"},
-    "kit admin": {"mode": "block", "security": true}
-  }
-}
+```text
+config/shirokai-commands/
+├── settings.json
+├── messages.json
+├── commands.json
+├── aliases.json
+└── tab-filters.json
 ```
 
-`defaultMode` aceita `allow` ou `block`. Whitelist habilitada bloqueia os comandos sem regra, independentemente do modo padrão. ALLOW libera explicitamente um caminho e seus descendentes; uma regra mais específica pode restringi-los. HIDE continua executável mesmo em whitelist. Em blacklist, mantenha `defaultMode: "allow"` e cadastre os bloqueios desejados.
+| Arquivo | Seções |
+| --- | --- |
+| `settings.json` | `configVersion` e `settings`: bypass, modo padrão, whitelist, logs e integração |
+| `messages.json` | `messages`: textos enviados ao jogador |
+| `commands.json` | `commands`: regras `block`, `hide` e `allow` |
+| `aliases.json` | `prefixAliases`: regras `replace` antigas; `argumentAliases`: padrões com `{nome}` |
+| `tab-filters.json` | `tabFilters`: jogadores online, prefixos e posições sem sugestões |
 
-Cada regra aceita `permission` para substituir o node gerado automaticamente, `message` para a recusa e `security` em BLOCK para impedir exceções em subcaminhos. `security` também respeita o bypass autorizado, conforme a prioridade definida. Caminhos não incluem `/`; o nome raiz é canônico em minúsculas. Argumentos preservam a caixa. IDs de permissão substituem espaços e pontuação por pontos: `kit admin` → `kit.admin`; colisões desses IDs são rejeitadas.
+Na primeira inicialização, o mod migra `config/shirokai-commands.json` para esses arquivos, preservando as configurações, regras, aliases e filtros. O original permanece intacto como cópia legada; depois da migração ele **não é mais lido**. Edite apenas a pasta nova. Se o legado estiver inválido, a migração é rejeitada sem sobrescrevê-lo.
 
-A configuração é validada antes de ser aplicada. Alterações administrativas usam gravação atômica no mesmo diretório e backup `.bak`, fora da thread principal. Reload inválido mantém a configuração anterior em memória. Se a configuração inicial for inválida, entra uma política de bloqueio padrão; console e administração autorizada permanecem disponíveis para corrigir e recarregar. O JSON inválido não é sobrescrito automaticamente.
+Regras REPLACE ficam em `aliases.json` dentro de `prefixAliases`, com a mesma estrutura anterior (`mode`, `alias`, `permission`, etc.). Não duplique o mesmo caminho em `commands.json` e `prefixAliases`. Veja os arquivos completos de exemplo em [config/shirokai-commands.example/](config/shirokai-commands.example/) e o guia em [docs/CONFIGURATION.md](docs/CONFIGURATION.md).
+
+`defaultMode` aceita `allow` ou `block`. Whitelist bloqueia caminhos sem regra; ALLOW permite um caminho e seus descendentes, respeitando regras mais específicas. HIDE continua executável. Cada regra pode ter `permission` e `message`; BLOCK também admite `security`. IDs derivados de caminhos e permissões continuam os mesmos após a migração.
+
+Todos os arquivos são lidos e validados como uma única configuração antes de aplicar `/sc reload`. Um arquivo inválido ou ausente mantém o estado válido anterior em memória; na inicialização inválida, a política padrão é restritiva e a administração/console ficam disponíveis. Arquivos ausentes de uma pasta parcialmente configurada não são recriados silenciosamente.
+
+Alterações administrativas continuam fora da thread principal: cada arquivo tem gravação atômica e backup `.bak`; um journal interno permite reverter o conjunto em caso de erro de I/O ou interrupção. Arquivos extras que você tenha na pasta não são modificados. Não remova ou edite `.pending-config.json` durante um salvamento; ele é consumido automaticamente na recuperação.
 
 ## Administração
 
@@ -149,7 +157,7 @@ Alterações só são confirmadas depois da gravação; outra alteração concor
 
 ## Ocultar moedas com namespace nas sugestões
 
-As opções `impactor:cash` e `impactor:tokens` dentro de `/pay` são **argumentos**, não comandos. Para manter somente as formas curtas nas sugestões de `/pay <valor> <jogador> <moeda>`, adicione na raiz de `config/shirokai-commands.json` (fora de `settings` e `commands`):
+As opções `impactor:cash` e `impactor:tokens` dentro de `/pay` são **argumentos**, não comandos. Para manter somente as formas curtas nas sugestões de `/pay <valor> <jogador> <moeda>`, adicione a lista em `config/shirokai-commands/tab-filters.json`:
 
 ```json
 "tabFilters": [
@@ -199,7 +207,7 @@ Exemplo para `/pay <valor> <jogador> <moeda>`, preservando também o filtro de m
 ]
 ```
 
-Adicione a lista na raiz de `config/shirokai-commands.json`; se ela já existir, acrescente as entradas sem duplicar a chave `tabFilters`. A lista acima é ilustrativa: nenhum desses filtros é ativado por padrão. `hidePrefixes` é opcional com `onlinePlayersOnly: true`; também é permitido usar apenas prefixos, como antes. Uma entrada sem nenhuma condição ativa é rejeitada. `onlinePlayersOnly` deve ser um booleano JSON (`true`/`false`), com padrão `false`.
+Adicione a lista em `config/shirokai-commands/tab-filters.json`; se ela já existir, acrescente as entradas sem duplicar a chave `tabFilters`. A lista acima é ilustrativa: nenhum desses filtros é ativado por padrão. `hidePrefixes` é opcional com `onlinePlayersOnly: true`; também é permitido usar apenas prefixos, como antes. Uma entrada sem nenhuma condição ativa é rejeitada. `onlinePlayersOnly` deve ser um booleano JSON (`true`/`false`), com padrão `false`.
 
 `argumentIndex` conta a partir de 1 após o caminho configurado. Para `/economy pay <valor> <jogador>`, use `"command": "economy pay"` e `"argumentIndex": 2`. O filtro respeita limites de tokens, diferencia `pay` de `payroll`, trata namespaces de raiz pela política normal e traduz os offsets dos aliases para o original. Apenas o argumento abrangido pelo range da sugestão é filtrado; um destinatário offline digitado manualmente não interfere nas sugestões de moeda ou mensagem que vêm depois.
 

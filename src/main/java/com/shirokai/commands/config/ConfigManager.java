@@ -9,13 +9,21 @@ import java.util.*;
 
 public final class ConfigManager {
   private final Path path;
+  private final SplitConfigStore split;
   private final Gson gson = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
   public ConfigManager(Path path) {
     this.path = path;
+    this.split = null;
+  }
+
+  public ConfigManager(Path directory, Path legacyFile) {
+    this.path = legacyFile;
+    this.split = new SplitConfigStore(directory, legacyFile);
   }
 
   public CommandConfig read() throws IOException {
+    if (split != null) return split.read();
     if (!Files.exists(path)) {
       var config = new CommandConfig();
       save(config);
@@ -23,13 +31,17 @@ public final class ConfigManager {
     }
     try (var reader = Files.newBufferedReader(path)) {
       JsonElement json = JsonParser.parseReader(reader);
-      validateJsonTypes(json);
-      CommandConfig config = gson.fromJson(json, CommandConfig.class);
-      validate(config);
-      return config;
+      return decode(json);
     } catch (RuntimeException e) {
       throw new IOException("Invalid config: " + e.getMessage(), e);
     }
+  }
+
+  CommandConfig decode(JsonElement json) {
+    validateJsonTypes(json);
+    CommandConfig config = gson.fromJson(json, CommandConfig.class);
+    validate(config);
+    return config;
   }
 
   private static void validateJsonTypes(JsonElement json) {
@@ -153,6 +165,10 @@ public final class ConfigManager {
   }
 
   public void save(CommandConfig config) throws IOException {
+    if (split != null) {
+      split.save(config);
+      return;
+    }
     validate(config);
     Files.createDirectories(path.getParent());
     Path tmp = Files.createTempFile(path.getParent(), "shirokai-commands-", ".tmp");

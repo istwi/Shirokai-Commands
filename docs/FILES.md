@@ -11,9 +11,15 @@ LICENSE
 README.md
 build.gradle
 config/shirokai-commands.example.json
+config/shirokai-commands.example/settings.json
+config/shirokai-commands.example/messages.json
+config/shirokai-commands.example/commands.json
+config/shirokai-commands.example/aliases.json
+config/shirokai-commands.example/tab-filters.json
 dist/README.md
 dist/SHA256SUMS
 dist/shirokai-commands-1.0.0+1.21.1.jar
+docs/CONFIGURATION.md
 docs/DEVELOPING.md
 docs/FILES.md
 docs/VALIDATION.md
@@ -35,6 +41,7 @@ src/main/java/com/shirokai/commands/alias/ArgumentTemplate.java
 src/main/java/com/shirokai/commands/command/AdminCommandManager.java
 src/main/java/com/shirokai/commands/config/CommandConfig.java
 src/main/java/com/shirokai/commands/config/ConfigManager.java
+src/main/java/com/shirokai/commands/config/SplitConfigStore.java
 src/main/java/com/shirokai/commands/filter/CommandFilter.java
 src/main/java/com/shirokai/commands/filter/CommandRuleEngine.java
 src/main/java/com/shirokai/commands/filter/TabRefreshManager.java
@@ -56,6 +63,7 @@ src/test/java/com/shirokai/commands/HideAllSuggestionsTest.java
 src/test/java/com/shirokai/commands/LuckPermsPermissionTest.java
 src/test/java/com/shirokai/commands/OnlinePlayersOnlyTest.java
 src/test/java/com/shirokai/commands/PolicyTest.java
+src/test/java/com/shirokai/commands/SplitConfigStoreTest.java
 src/test/java/com/shirokai/commands/TabSuggestionFilterTest.java
 ```
 

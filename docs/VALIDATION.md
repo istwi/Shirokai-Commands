@@ -8,18 +8,18 @@ Verificação local em 10/11/2026. Código e jar de testes enviados à branch `m
 | --- | --- |
 | JDK 21, Loom 1.8.13, Minecraft 1.21.1, Yarn build.3 | Compilação realizada |
 | `./gradlew build` | Sucesso; jar remapeado e fontes gerados |
-| Testes JUnit | 121 testes, zero falhas/erros/skips |
-| `python3 scripts/integration-test.py` | Servidor Fabric dedicado: 98 assertions aprovadas |
+| Testes JUnit | 140 testes, zero falhas/erros/skips |
+| `python3 scripts/integration-test.py` | Servidor Fabric dedicado: 105 assertions aprovadas |
 | `./gradlew runServer --args nogui` | Inicialização normal atingiu `Done`, sem mod auxiliar de teste; encerramento limpo |
 | Metadados do jar | Ambiente `server`; mod auxiliar de teste ausente |
 | Checksums Gradle e JDK | Conferidos antes de usar os arquivos baixados |
 | GitHub Actions | Arquivos criados; execução remota ainda não realizada |
 
-Os 121 testes JUnit abrangem: modos HIDE/BLOCK/REPLACE, ALLOW e prioridade de segurança, bypass, whitelist, permissões de regra/alias, namespaces, limites de palavras, ciclos/duplicações, JSON inválido, backup, auditoria sem argumentos sensíveis, filtragem Brigadier e contrato de consulta da API LuckPerms.
+Os 140 testes JUnit abrangem: modos HIDE/BLOCK/REPLACE, ALLOW e prioridade de segurança, bypass, whitelist, permissões de regra/alias, namespaces, limites de palavras, ciclos/duplicações, JSON inválido, backup, auditoria sem argumentos sensíveis, filtragem Brigadier e contrato de consulta da API LuckPerms.
 
 Os seis testes da API LuckPerms usam interfaces oficiais com proxies controlados: TRUE, FALSE, UNDEFINED, usuário não carregado, QueryOptions contextual e fallback estático. **Não comprovam execução com o plugin LuckPerms instalado**, nem grupos/herança do plugin real.
 
-As 98 assertions dedicadas exercitam as classes reais do Minecraft/Fabric e mixins carregados: bloqueio da entrada não assinada da rede, comando oculto executável, namespace, redirect alternativo, `execute run`, aliases com fonte do jogador e argumentos, sugestões (inclusive após espaço), subcomandos, prefixo fixo dinâmico, subaliases irmãos, exigência vanilla original, árvore efetiva de `CommandTreeS2CPacket` (incluindo ancestral bloqueado como contêiner não executável para um filho permitido), whitelist, backup, reload, JSON inválido, permissões administrativas, console e proteção opcional de chamadas internas. O jogador é simulado e o handler captura pacotes; não há cliente autenticado nesse teste.
+As 105 assertions dedicadas exercitam as classes reais do Minecraft/Fabric e mixins carregados: bloqueio da entrada não assinada da rede, comando oculto executável, namespace, redirect alternativo, `execute run`, aliases com fonte do jogador e argumentos, sugestões (inclusive após espaço), subcomandos, prefixo fixo dinâmico, subaliases irmãos, exigência vanilla original, árvore efetiva de `CommandTreeS2CPacket` (incluindo ancestral bloqueado como contêiner não executável para um filho permitido), whitelist, backup, reload, JSON inválido, permissões administrativas, console e proteção opcional de chamadas internas. O jogador é simulado e o handler captura pacotes; não há cliente autenticado nesse teste.
 
 O servidor de testes funciona em modo offline/loopback. Houve aviso de consulta às chaves públicas Mojang por DNS indisponível no processo Java; autenticação online não foi validada. Isso não impediu as assertions locais nem o encerramento limpo.
 
@@ -69,8 +69,16 @@ Foram adicionados 27 testes unitários e 21 verificações dedicadas para padrõ
 
 O servidor de integração executa `sctpay cash 123 Alice` na implementação original com os valores reorganizados e a mesma fonte do jogador, conserva a sintaxe original, consulta sugestões de jogadores na posição traduzida e aplica filtros online/moeda ao destino. Foram verificados um comando independente, um parser real de Identifier para `minecraft:stone`, execução dentro de `/execute`, sugestões estáticas quando não há dados suficientes para consultar o provedor original, reload sem duplicação e remoção via `/sc remove` preservando os comandos originais e aliases irmãos.
 
-`./gradlew test` e `./gradlew build` passaram; a suíte dedicada terminou com 98 assertions aprovadas. Esses testes usam comandos/provedores de teste no Fabric/Minecraft real. Impactor, WorldEdit e os demais mods instalados não foram executados na mesma suíte; não se declara compatibilidade comprovada com todos os parsers, forks ou alterações dinâmicas de registro.
+`./gradlew test` e `./gradlew build` passaram; a suíte dedicada terminou com 105 assertions aprovadas. Esses testes usam comandos/provedores de teste no Fabric/Minecraft real. Impactor, WorldEdit e os demais mods instalados não foram executados na mesma suíte; não se declara compatibilidade comprovada com todos os parsers, forks ou alterações dinâmicas de registro.
 
 ## Rótulo de argumentos
 
-Três testes unitários validam o rótulo automático a partir dos placeholders, o nome personalizado e a rejeição de valores inválidos. Duas verificações dedicadas conferem os nomes tanto no dispatcher do servidor quanto na árvore reconstruída do `CommandTreeS2CPacket`: `amount_player` por padrão e `quantidade_jogador` configurado. A execução e as sugestões anteriores continuam passando na suíte completa (121 testes JUnit e 98 assertions dedicadas).
+Três testes unitários validam o rótulo automático a partir dos placeholders, o nome personalizado e a rejeição de valores inválidos. Duas verificações dedicadas conferem os nomes tanto no dispatcher do servidor quanto na árvore reconstruída do `CommandTreeS2CPacket`: `amount_player` por padrão e `quantidade_jogador` configurado. A execução e as sugestões anteriores continuam passando na suíte completa (140 testes JUnit e 105 assertions dedicadas).
+
+## Configuração separada e aliases padrão
+
+Dezessete testes de persistência cobrem a criação dos cinco arquivos, migração sem alterar o legado, separação de REPLACE/argumentAliases e bloqueios/HIDE/ALLOW, prioridade da pasta ativa sobre o legado, edição de seções, backups, arquivo ausente, JSON inválido, duplicatas, tipos booleanos, arquivos extras e rollback. Um journal de salvamento interrompido é recuperado; um journal com caminho não gerenciado é rejeitado antes de alterar arquivos. Um erro real de filesystem ao criar o backup é exercitado sem perder a configuração anterior.
+
+Dois testes unitários adicionais validam o padrão `home {name}` → `home tp {name}` com extensão explícita, mantendo a rejeição do autoencaminhamento sem rota literal original. A integração adiciona cinco verificações de execução/precedência/TAB do atalho padrão e duas da migração com preservação do legado. O fluxo de reload, alteração administrativa, erro de JSON e remoção de alias agora opera nos arquivos separados.
+
+Resultado atual: `test`/`build` passaram com 140 testes JUnit e a integração dedicada concluiu 105 assertions. Os comandos de homes e demais mods são fixtures do servidor Fabric, não uma validação de cada implementação externa instalada.

@@ -24,7 +24,8 @@ Aceite a EULA do Minecraft somente se estiver de acordo. O runner de integraçã
 
 ## Componentes
 
-- `config/ConfigManager`: validação, cópia de snapshots, backup e gravação atômica.
+- `config/ConfigManager`: validação e cópia de snapshots; o construtor de arquivo único permanece para ler o formato legado.
+- `config/SplitConfigStore`: cinco arquivos ativos, migração do legado, backups por arquivo e journal de rollback. O runtime usa o construtor de diretório do ConfigManager.
 - `filter/CommandRuleEngine`: política compartilhada por execução, árvore e sugestões; lookup por prefixos de tokens, sem varreduras em ticks.
 - `filter/TabSuggestionFilter`: filtros cosméticos por argumento/range, prefixos e snapshot de nomes online; não altera execução.
 - `filter/CommandFilter`: cópia filtrada da árvore; não modifica o dispatcher original.

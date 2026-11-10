@@ -70,6 +70,21 @@ class ArgumentTemplateTest {
   }
 
   @Test
+  void defaultRouteToOwnSubcommandCompiles() {
+    var s = spec("home {name}", "home tp {name}");
+    s.extendExisting = true;
+    assertEquals(1, ArgumentTemplate.compile(Map.of("home_direct", s)).size());
+  }
+
+  @Test
+  void rootSelfLoopStillRejected() {
+    var s = spec("home {name}", "home {name}");
+    s.extendExisting = true;
+    assertThrows(
+        IllegalArgumentException.class, () -> ArgumentTemplate.compile(Map.of("home_direct", s)));
+  }
+
+  @Test
   void reordersAndKeepsLiteralCurrency() {
     var t = pay();
     assertEquals("pay 100 Alice cash", t.expand(t.match("pay cash 100 Alice")));

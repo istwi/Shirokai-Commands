@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Run actual Fabric dedicated-server assertions in an isolated generated world."""
 import json
+import shutil
 import os
 import signal
 import pathlib
@@ -11,6 +12,8 @@ root = pathlib.Path(__file__).resolve().parent.parent
 run = root / 'run' / 'integration'
 config = run / 'config' / 'shirokai-commands.json'
 config.parent.mkdir(parents=True, exist_ok=True)
+# This generated directory belongs exclusively to the dedicated test runner.
+shutil.rmtree(config.parent / 'shirokai-commands', ignore_errors=True)
 commands = {
     'scthidden': {'mode': 'hide'},
     'sctrouteblocked': {'mode': 'block'},
@@ -30,6 +33,7 @@ commands = {
     'sctaliaspay': {'mode': 'replace', 'alias': 'sctsend'},
 }
 argument_aliases = {
+    'home_direct': {'alias': 'scthome {name}', 'target': 'scthome tp {name}', 'extendExisting': True},
     'ordered_routeblocked': {'alias': 'sctrouteblocked {amount}', 'target': 'sctpay {amount} Alice cash'},
     'ordered_routehidden': {'alias': 'sctroutehidden {amount}', 'target': 'sctpay {amount} Alice cash'},
     'ordered_item': {'alias': 'sctitems {item} {player}', 'target': 'sctitem {player} {item}'},

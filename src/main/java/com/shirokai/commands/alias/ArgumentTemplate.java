@@ -293,6 +293,10 @@ public final class ArgumentTemplate {
       }
     for (var source : templates)
       for (var destination : templates) {
+        if (source == destination
+            && source.spec.extendExisting
+            && source.prefix.size() == 1
+            && parse(source.fixedTargetPrefix()).size() > 1) continue;
         if (CommandPath.prefix(source.fixedTargetPrefix(), String.join(" ", destination.prefix())))
           throw new IllegalArgumentException(
               "Argument alias target refers to another argument alias: "

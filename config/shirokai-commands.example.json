@@ -72,6 +72,12 @@
       "target": "pay {quantidade} {jogador} tokens",
       "extendExisting": true,
       "argumentLabel": "quantidade_jogador"
+    },
+    "home_tp": {
+      "alias": "home {nome}",
+      "target": "home tp {nome}",
+      "extendExisting": true,
+      "argumentLabel": "nome"
     }
   }
 }
