@@ -488,6 +488,28 @@ public class DedicatedServerTests implements ModInitializer {
               .collect(java.util.stream.Collectors.toSet())
               .containsAll(Set.of("cash", "tokens", "dollars")),
           "Currency literal branches are suggested");
+      check(
+          server
+                      .getCommandManager()
+                      .getDispatcher()
+                      .getRoot()
+                      .getChild("sctpay")
+                      .getChild("cash")
+                      .getChild("amount_player")
+                  != null
+              && root.getChild("sctpay").getChild("cash").getChild("amount_player") != null,
+          "Default argument label uses placeholder names");
+      check(
+          server
+                      .getCommandManager()
+                      .getDispatcher()
+                      .getRoot()
+                      .getChild("sctpay")
+                      .getChild("tokens")
+                      .getChild("quantidade_jogador")
+                  != null
+              && root.getChild("sctpay").getChild("tokens").getChild("quantidade_jogador") != null,
+          "Custom argument label reaches real command tree");
       invoke("sctpay cash 123 Alice");
       check(
           paidAmount == 123 && paidTarget.equals("Alice") && paidCurrency.equals("cash"),

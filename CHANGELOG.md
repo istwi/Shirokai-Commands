@@ -12,6 +12,8 @@ Novo `hideAll` em `tabFilters` para deixar uma posição sem sugestões, inclusi
 
 Novo `argumentAliases` genérico com placeholders nomeados, reorganização de argumentos, extensão aditiva de raízes existentes, sugestões do destino, permissões originais e integração com os filtros de TAB. `list` e `remove` também tratam os novos IDs.
 
+Os rótulos de argumentos dos templates agora usam os nomes configurados em vez de `template_arguments`; `argumentLabel` permite personalização sem alterar a execução.
+
 Implementação inicial para Fabric 1.21.1 / Java 21:
 
 - Políticas HIDE, BLOCK, REPLACE e ALLOW, whitelist e permissões por regra.

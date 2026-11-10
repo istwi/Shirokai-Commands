@@ -34,7 +34,7 @@ argument_aliases = {
     'ordered_routehidden': {'alias': 'sctroutehidden {amount}', 'target': 'sctpay {amount} Alice cash'},
     'ordered_item': {'alias': 'sctitems {item} {player}', 'target': 'sctitem {player} {item}'},
     'ordered_cash': {'alias': 'sctpay cash {amount} {player}', 'target': 'sctpay {amount} {player} cash', 'extendExisting': True},
-    'ordered_tokens': {'alias': 'sctpay tokens {amount} {player}', 'target': 'sctpay {amount} {player} tokens', 'extendExisting': True},
+    'ordered_tokens': {'argumentLabel': 'quantidade_jogador', 'alias': 'sctpay tokens {amount} {player}', 'target': 'sctpay {amount} {player} tokens', 'extendExisting': True},
     'ordered_dollars': {'alias': 'sctpay dollars {amount} {player}', 'target': 'sctpay {amount} {player} dollars', 'extendExisting': True},
     'ordered_other': {'alias': 'sctmessage {message} {player}', 'target': 'sctmsg {player} {message}'},
     'ordered_denied': {'alias': 'sctordereddenied {amount}', 'target': 'sctdenied {amount}'},

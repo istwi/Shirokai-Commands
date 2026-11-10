@@ -103,6 +103,8 @@ public final class ArgumentTemplate {
       bad("Every input argument must occur exactly once in the target");
     target = List.copyOf(parts);
     if (spec.permission != null && spec.permission.isBlank()) bad("Empty permission");
+    if (spec.argumentLabel != null && !spec.argumentLabel.matches("[\\p{L}\\p{N}_-]{1,64}"))
+      bad("argumentLabel must contain 1..64 letters, digits, underscores or hyphens");
     for (var e : spec.suggestions.entrySet())
       if (!names.contains(e.getKey())
           || e.getValue() == null
@@ -136,6 +138,12 @@ public final class ArgumentTemplate {
 
   public List<String> names() {
     return names;
+  }
+
+  public String argumentLabel() {
+    return spec.argumentLabel != null
+        ? spec.argumentLabel
+        : (names.isEmpty() ? "argumentos" : String.join("_", names));
   }
 
   public String root() {

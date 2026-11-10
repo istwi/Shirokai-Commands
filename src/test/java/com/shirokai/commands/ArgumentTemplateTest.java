@@ -47,6 +47,29 @@ class ArgumentTemplateTest {
   }
 
   @Test
+  void defaultLabelUsesConfiguredParameters() {
+    assertEquals("amount_player", pay().argumentLabel());
+  }
+
+  @Test
+  void customLabelOverridesDisplayOnly() {
+    var s = spec("pay cash {amount} {player}", "pay {amount} {player} cash");
+    s.argumentLabel = "quantidade_jogador";
+    var t = new ArgumentTemplate("custom", s);
+    assertEquals("quantidade_jogador", t.argumentLabel());
+    assertEquals("pay 10 Alice cash", t.expand(t.match("pay cash 10 Alice")));
+  }
+
+  @Test
+  void invalidLabelsRejected() {
+    for (String label : List.of("", " ", "<argumentos>", "x\ny")) {
+      var s = spec("foo {a}", "bar {a}");
+      s.argumentLabel = label;
+      assertThrows(IllegalArgumentException.class, () -> new ArgumentTemplate("x", s));
+    }
+  }
+
+  @Test
   void reordersAndKeepsLiteralCurrency() {
     var t = pay();
     assertEquals("pay 100 Alice cash", t.expand(t.match("pay cash 100 Alice")));

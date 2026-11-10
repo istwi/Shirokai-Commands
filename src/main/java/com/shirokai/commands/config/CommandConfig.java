@@ -13,6 +13,7 @@ public final class CommandConfig {
   public static class ArgumentAlias {
     public String alias;
     public String target;
+    public String argumentLabel;
     public boolean extendExisting = false;
     public String permission;
     public Map<String, List<String>> suggestions = new LinkedHashMap<>();

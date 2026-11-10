@@ -38,6 +38,12 @@ public final class ConfigManager {
     if (named != null && named.isJsonObject())
       for (var definition : named.getAsJsonObject().entrySet()) {
         if (!definition.getValue().isJsonObject()) continue;
+        JsonElement label = definition.getValue().getAsJsonObject().get("argumentLabel");
+        if (label != null
+            && !label.isJsonNull()
+            && (!label.isJsonPrimitive() || !label.getAsJsonPrimitive().isString()))
+          throw new IllegalArgumentException(
+              "argumentAliases." + definition.getKey() + ".argumentLabel must be a JSON string");
         JsonElement flag = definition.getValue().getAsJsonObject().get("extendExisting");
         if (flag != null && (!flag.isJsonPrimitive() || !flag.getAsJsonPrimitive().isBoolean()))
           throw new IllegalArgumentException(

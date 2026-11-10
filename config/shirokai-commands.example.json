@@ -58,17 +58,20 @@
     "pay_cash": {
       "alias": "pay cash {quantidade} {jogador}",
       "target": "pay {quantidade} {jogador} cash",
-      "extendExisting": true
+      "extendExisting": true,
+      "argumentLabel": "quantidade_jogador"
     },
     "pay_dollars": {
       "alias": "pay dollars {quantidade} {jogador}",
       "target": "pay {quantidade} {jogador} dollars",
-      "extendExisting": true
+      "extendExisting": true,
+      "argumentLabel": "quantidade_jogador"
     },
     "pay_tokens": {
       "alias": "pay tokens {quantidade} {jogador}",
       "target": "pay {quantidade} {jogador} tokens",
-      "extendExisting": true
+      "extendExisting": true,
+      "argumentLabel": "quantidade_jogador"
     }
   }
 }

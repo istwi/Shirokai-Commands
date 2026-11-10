@@ -112,7 +112,7 @@ public final class ArgumentAliasManager {
     ArgumentBuilder<ServerCommandSource, ?> branch = null;
     if (!t.names().isEmpty())
       branch =
-          argument("template_arguments", StringArgumentType.greedyString())
+          argument(t.argumentLabel(), StringArgumentType.greedyString())
               .requires(source -> ShirokaiCommands.get().argumentAliasAllowed(source, t))
               .suggests((ctx, b) -> suggest(t, ctx, b))
               .executes(c -> execute(t, c));
