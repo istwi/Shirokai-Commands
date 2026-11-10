@@ -30,6 +30,8 @@ src/integrationTest/java/com/shirokaicommands/test/DedicatedServerTests.java
 src/integrationTest/resources/fabric.mod.json
 src/main/java/com/shirokai/commands/ShirokaiCommands.java
 src/main/java/com/shirokai/commands/alias/AliasManager.java
+src/main/java/com/shirokai/commands/alias/ArgumentAliasManager.java
+src/main/java/com/shirokai/commands/alias/ArgumentTemplate.java
 src/main/java/com/shirokai/commands/command/AdminCommandManager.java
 src/main/java/com/shirokai/commands/config/CommandConfig.java
 src/main/java/com/shirokai/commands/config/ConfigManager.java
@@ -47,6 +49,7 @@ src/main/java/com/shirokai/commands/security/CommandExecutionGuard.java
 src/main/java/com/shirokai/commands/util/CommandPath.java
 src/main/resources/fabric.mod.json
 src/main/resources/shirokai-commands.mixins.json
+src/test/java/com/shirokai/commands/ArgumentTemplateTest.java
 src/test/java/com/shirokai/commands/BrigadierTest.java
 src/test/java/com/shirokai/commands/CommandPathTest.java
 src/test/java/com/shirokai/commands/HideAllSuggestionsTest.java

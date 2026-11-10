@@ -34,6 +34,15 @@ public final class ConfigManager {
 
   private static void validateJsonTypes(JsonElement json) {
     if (!json.isJsonObject()) return;
+    JsonElement named = json.getAsJsonObject().get("argumentAliases");
+    if (named != null && named.isJsonObject())
+      for (var definition : named.getAsJsonObject().entrySet()) {
+        if (!definition.getValue().isJsonObject()) continue;
+        JsonElement flag = definition.getValue().getAsJsonObject().get("extendExisting");
+        if (flag != null && (!flag.isJsonPrimitive() || !flag.getAsJsonPrimitive().isBoolean()))
+          throw new IllegalArgumentException(
+              "argumentAliases." + definition.getKey() + ".extendExisting must be a JSON boolean");
+      }
     JsonElement filters = json.getAsJsonObject().get("tabFilters");
     if (filters == null || !filters.isJsonArray()) return;
     for (JsonElement entry : filters.getAsJsonArray()) {
@@ -82,6 +91,18 @@ public final class ConfigManager {
             "Invalid tabFilter: specify native command, argumentIndex (1..64), and "
                 + "onlinePlayersOnly: true, hideAll: true, or nonempty hidePrefixes");
     }
+    var argumentAliases = com.shirokai.commands.alias.ArgumentTemplate.compile(c.argumentAliases);
+    for (var template : argumentAliases)
+      for (var e : c.commands.entrySet()) {
+        if (e.getValue() != null && "replace".equals(e.getValue().mode)) {
+          String root = e.getValue().alias == null ? "" : e.getValue().alias.split(" ")[0];
+          if (template.root().equals(root) || template.targetRoot().equals(root))
+            throw new IllegalArgumentException(
+                "Argument alias conflicts with replacement alias root: " + root);
+          if (template.id().equals(CommandPath.id(e.getKey())))
+            throw new IllegalArgumentException("Duplicate alias permission id: " + template.id());
+        }
+      }
     Set<String> aliases = new HashSet<>();
     Set<String> ids = new HashSet<>();
     for (var e : c.commands.entrySet()) {
@@ -111,6 +132,9 @@ public final class ConfigManager {
           throw new IllegalArgumentException("Duplicate alias: " + r.alias);
       }
     }
+    for (var template : argumentAliases)
+      if (ids.contains(template.id()))
+        throw new IllegalArgumentException("Duplicate rule/argument alias id: " + template.id());
     // No alias may overlap another alias or any managed original. This also rejects cycles.
     for (String a : aliases) {
       for (String b : aliases)

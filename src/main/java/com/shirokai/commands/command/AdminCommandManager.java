@@ -98,11 +98,11 @@ public final class AdminCommandManager {
                                       next.commands.keySet().stream()
                                           .filter(k -> k.equals(id) || CommandPath.id(k).equals(id))
                                           .findFirst()
-                                          .orElseThrow(
-                                              () ->
-                                                  new IllegalArgumentException(
-                                                      "Regra não encontrada: " + id));
-                                  next.commands.remove(key);
+                                          .orElse(null);
+                                  if (key != null) next.commands.remove(key);
+                                  else if (next.argumentAliases.remove(id) == null)
+                                    throw new IllegalArgumentException(
+                                        "Regra ou alias não encontrado: " + id);
                                 }))));
     var whitelist = literal("whitelist").requires(s -> mod.isAdmin(s, "shirokaicommands.admin"));
     for (String toggle : new String[] {"on", "off"})
@@ -133,6 +133,13 @@ public final class AdminCommandManager {
                                       + " -> "
                                       + rule.mode
                                       + (rule.alias == null ? "" : " /" + rule.alias)));
+                  mod.config()
+                      .argumentAliases
+                      .forEach(
+                          (id, alias) ->
+                              message(
+                                  c.getSource(),
+                                  id + ": /" + alias.alias + " -> /" + alias.target));
                   return 1;
                 }));
     root.then(

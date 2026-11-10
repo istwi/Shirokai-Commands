@@ -16,6 +16,61 @@ Versões usadas na compilação e nos testes: Fabric Loader **0.16.14**, Fabric 
 
 O exemplo em [config/shirokai-commands.example.json](config/shirokai-commands.example.json) contém comandos de outros mods: só ative substituições quando seus comandos originais estiverem registrados. O arquivo não é copiado automaticamente para a configuração ativa.
 
+## Aliases com argumentos nomeados e ordem personalizada
+
+Use a propriedade opcional `argumentAliases` na raiz do JSON. Ela é genérica: qualquer comando de destino registrado no Brigadier pode ser usado, sem dependência de Impactor. O mapa padrão é vazio. Exemplo para adicionar a sintaxe `/pay <moeda> <quantidade> <jogador>` sem remover a original:
+
+```json
+"argumentAliases": {
+  "pay_cash": {
+    "alias": "pay cash {quantidade} {jogador}",
+    "target": "pay {quantidade} {jogador} cash",
+    "extendExisting": true
+  },
+  "pay_dollars": {
+    "alias": "pay dollars {quantidade} {jogador}",
+    "target": "pay {quantidade} {jogador} dollars",
+    "extendExisting": true
+  },
+  "pay_tokens": {
+    "alias": "pay tokens {quantidade} {jogador}",
+    "target": "pay {quantidade} {jogador} tokens",
+    "extendExisting": true
+  }
+}
+```
+
+Assim `/pay cash 100 Alice` encaminha `pay 100 Alice cash` ao comando original, com a fonte do jogador. As moedas precisam existir no mod de economia; o Shirokai não as cria nem libera transferências proibidas. O `/pay 100 Alice cash` original continua funcionando.
+
+- `alias` contém um prefixo de literais e depois argumentos `{nome}`. Cada nome deve aparecer uma única vez.
+- `target` começa com uma raiz fixa de comando original e pode reorganizar os mesmos `{nomes}`, cada um exatamente uma vez, com literais fixos entre eles.
+- `extendExisting: true` permite adicionar um novo subcomando literal a uma raiz existente. Não substitui a raiz nem seus argumentos originais. Como literais têm precedência sobre argumentos dinâmicos no Brigadier, escolha um prefixo que não represente um valor importante da sintaxe antiga. Um caminho já registrado, como `pay cash` se outro mod já o possuir, é rejeitado. Raízes com redirecionamento ou extensões sem um novo literal não são aceitas; use uma raiz nova nesses casos.
+- Os IDs, como `pay_cash`, são únicos e usam letras minúsculas, números, `_` ou `-`. A permissão adicional padrão é `shirokaicommands.alias.pay_cash`, permitida quando indefinida. `permission` pode configurar outro node. Bypass autorizado ignora essa permissão adicional, mas não as exigências originais do destino.
+
+Outra opção, com uma raiz nova e moeda como argumento:
+
+```json
+"argumentAliases": {
+  "pagar": {
+    "alias": "pagar {moeda} {quantidade} {jogador}",
+    "target": "pay {quantidade} {jogador} {moeda}",
+    "suggestions": {
+      "moeda": ["cash", "dollars", "tokens"]
+    }
+  }
+}
+```
+
+Esse segundo exemplo cria `/pagar cash 100 Alice`. `suggestions` é opcional: configure valores fixos quando o argumento vier antes dos parâmetros que o provedor original precisa. Não são inventados valores de quantidade ou de jogador para consultar o destino. Quando os parâmetros anteriores necessários já estão disponíveis, as sugestões são consultadas no provedor original e mapeadas de volta ao argumento do alias. Nomes de jogadores não são adicionados automaticamente.
+
+Os `tabFilters` continuam configurados conforme a ordem **do destino**. Por exemplo, `pay` com `argumentIndex: 2` e `onlinePlayersOnly: true` filtra o jogador mesmo quando ele aparece na terceira posição do novo `/pay cash 100 Alice`. O filtro de moeda na posição 3 também acompanha a moeda movida para o início. Ranges e valores são projetados apenas para avaliar a política; os placeholders vazios dessa projeção nunca são executados.
+
+Valores com espaços precisam de aspas. A forma lexical dos argumentos, inclusive aspas, escapes e identificadores como `minecraft:stone`, é encaminhada ao destino; o parser original decide como interpretá-los. O número de argumentos deve ser exato. Não há suporte a literais depois do primeiro placeholder em `alias`, variáveis dentro de tokens ou repetição/descarte de argumentos no destino. Para texto greedy, considere que aspas mantidas podem fazer parte do texto, conforme o parser do comando original.
+
+A execução usa um snapshot da árvore de comandos original, com seus requisitos, redirecionamentos e callbacks, sem privilégios de console. Não encadeia templates entre si. Referências estáticas a outro template, ciclos, prefixos ambíguos, campos inválidos e conflitos com aliases antigos são rejeitados antes de salvar. BLOCK/HIDE e permissões da rota digitada e do destino continuam sendo avaliados; um template não ignora um BLOCK ou REPLACE aplicado ao destino. `/sc list` inclui os templates e `/sc remove pay_cash` remove um pelo ID. `/sc replace` continua criando apenas os aliases de prefixo antigos; padrões `{nome}` são configurados no JSON.
+
+Depois de instalar o jar atualizado, reinicie o servidor. Para alterar apenas o JSON, use `/sc reload`: alterações inválidas mantêm a configuração válida anterior. Use reload também após mudanças dinâmicas na árvore de comandos de outros mods. Estruturas especiais, alterações tardias de registro, forks personalizados e argumentos de chat assinados precisam de validação com o conjunto real de mods; o Shirokai não reassina mensagens. A compatibilidade instalada com Impactor 5.3.5 ainda não foi comprovada pelos testes locais.
+
 ## Modos e prioridade
 
 | Modo | TAB | Execução manual |

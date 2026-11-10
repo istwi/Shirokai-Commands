@@ -8,6 +8,15 @@ public final class CommandConfig {
   public Messages messages = new Messages();
   public Map<String, Rule> commands = new LinkedHashMap<>();
   public List<TabFilter> tabFilters = new ArrayList<>();
+  public Map<String, ArgumentAlias> argumentAliases = new LinkedHashMap<>();
+
+  public static class ArgumentAlias {
+    public String alias;
+    public String target;
+    public boolean extendExisting = false;
+    public String permission;
+    public Map<String, List<String>> suggestions = new LinkedHashMap<>();
+  }
 
   /** Cosmetic suggestion filters; argumentIndex counts from one after the command path. */
   public static class TabFilter {

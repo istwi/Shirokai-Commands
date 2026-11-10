@@ -13,6 +13,8 @@ config = run / 'config' / 'shirokai-commands.json'
 config.parent.mkdir(parents=True, exist_ok=True)
 commands = {
     'scthidden': {'mode': 'hide'},
+    'sctrouteblocked': {'mode': 'block'},
+    'sctroutehidden': {'mode': 'hide'},
     '/sctwand': {'mode': 'block'},
     '/scthidden': {'mode': 'hide'},
     '/sctoriginal': {'mode': 'replace', 'alias': 'sctslashalias'},
@@ -27,8 +29,31 @@ commands = {
     'sctsecond': {'mode': 'replace', 'alias': 'sctgroup second'},
     'sctaliaspay': {'mode': 'replace', 'alias': 'sctsend'},
 }
+argument_aliases = {
+    'ordered_routeblocked': {'alias': 'sctrouteblocked {amount}', 'target': 'sctpay {amount} Alice cash'},
+    'ordered_routehidden': {'alias': 'sctroutehidden {amount}', 'target': 'sctpay {amount} Alice cash'},
+    'ordered_item': {'alias': 'sctitems {item} {player}', 'target': 'sctitem {player} {item}'},
+    'ordered_cash': {'alias': 'sctpay cash {amount} {player}', 'target': 'sctpay {amount} {player} cash', 'extendExisting': True},
+    'ordered_tokens': {'alias': 'sctpay tokens {amount} {player}', 'target': 'sctpay {amount} {player} tokens', 'extendExisting': True},
+    'ordered_dollars': {'alias': 'sctpay dollars {amount} {player}', 'target': 'sctpay {amount} {player} dollars', 'extendExisting': True},
+    'ordered_other': {'alias': 'sctmessage {message} {player}', 'target': 'sctmsg {player} {message}'},
+    'ordered_denied': {'alias': 'sctordereddenied {amount}', 'target': 'sctdenied {amount}'},
+    'ordered_blocked': {'alias': 'sctorderedblocked', 'target': 'sctblocked'},
+    'ordered_static': {'alias': 'sctstatic {currency} {amount} {player}', 'target': 'sctpay {amount} {player} {currency}', 'suggestions': {'currency': ['cash', 'tokens', 'dollars', 'impactor:cash']}}
+}
+filters = [
+    {'command': 'sctpay', 'argumentIndex': 3, 'hidePrefixes': ['impactor:']},
+    {'command': 'sctpay', 'argumentIndex': 2, 'onlinePlayersOnly': True},
+    {'command': 'sctaliaspay', 'argumentIndex': 2, 'onlinePlayersOnly': True},
+    {'command': 'scteconomy pay', 'argumentIndex': 2, 'onlinePlayersOnly': True},
+    {'command': 'sctmsg', 'argumentIndex': 1, 'onlinePlayersOnly': True},
+    {'command': 'sctafterpay', 'argumentIndex': 2, 'onlinePlayersOnly': True},
+    {'command': 'sctafterpay', 'argumentIndex': 3, 'hidePrefixes': ['impactor:']},
+    {'command': 'sctafterpay', 'argumentIndex': 4, 'hideAll': True}
+]
 config.write_text(json.dumps({'configVersion': 1, 'settings': {'opBypass': True},
-                              'messages': {}, 'commands': commands, 'tabFilters': [{'command': 'sctpay', 'argumentIndex': 3, 'hidePrefixes': ['impactor:']}, {'command': 'sctpay', 'argumentIndex': 2, 'onlinePlayersOnly': True}, {'command': 'sctaliaspay', 'argumentIndex': 2, 'onlinePlayersOnly': True}, {'command': 'scteconomy pay', 'argumentIndex': 2, 'onlinePlayersOnly': True}, {'command': 'sctmsg', 'argumentIndex': 1, 'onlinePlayersOnly': True}, {'command': 'sctafterpay', 'argumentIndex': 2, 'onlinePlayersOnly': True}, {'command': 'sctafterpay', 'argumentIndex': 3, 'hidePrefixes': ['impactor:']}, {'command': 'sctafterpay', 'argumentIndex': 4, 'hideAll': True}] }, indent=2))
+                             'messages': {}, 'commands': commands, 'tabFilters': filters,
+                             'argumentAliases': argument_aliases}, indent=2))
 (run / 'eula.txt').write_text('eula=true\n')
 (run / 'server.properties').write_text('online-mode=false\nserver-ip=127.0.0.1\nserver-port=25575\nview-distance=2\nsimulation-distance=2\nspawn-protection=0\nlevel-type=minecraft:flat\ngenerator-settings={"layers":[{"block":"minecraft:bedrock","height":1},{"block":"minecraft:dirt","height":2},{"block":"minecraft:grass_block","height":1}],"biome":"minecraft:plains"}\ngenerate-structures=false\nmax-tick-time=120000\n')
 result = run / 'test-result.txt'

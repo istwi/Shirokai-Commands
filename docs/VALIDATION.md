@@ -8,18 +8,18 @@ Verificação local em 10/11/2026. Código e jar de testes enviados à branch `m
 | --- | --- |
 | JDK 21, Loom 1.8.13, Minecraft 1.21.1, Yarn build.3 | Compilação realizada |
 | `./gradlew build` | Sucesso; jar remapeado e fontes gerados |
-| Testes JUnit | 91 testes, zero falhas/erros/skips |
-| `python3 scripts/integration-test.py` | Servidor Fabric dedicado: 75 assertions aprovadas |
+| Testes JUnit | 118 testes, zero falhas/erros/skips |
+| `python3 scripts/integration-test.py` | Servidor Fabric dedicado: 96 assertions aprovadas |
 | `./gradlew runServer --args nogui` | Inicialização normal atingiu `Done`, sem mod auxiliar de teste; encerramento limpo |
 | Metadados do jar | Ambiente `server`; mod auxiliar de teste ausente |
 | Checksums Gradle e JDK | Conferidos antes de usar os arquivos baixados |
 | GitHub Actions | Arquivos criados; execução remota ainda não realizada |
 
-Os 91 testes JUnit abrangem: modos HIDE/BLOCK/REPLACE, ALLOW e prioridade de segurança, bypass, whitelist, permissões de regra/alias, namespaces, limites de palavras, ciclos/duplicações, JSON inválido, backup, auditoria sem argumentos sensíveis, filtragem Brigadier e contrato de consulta da API LuckPerms.
+Os 118 testes JUnit abrangem: modos HIDE/BLOCK/REPLACE, ALLOW e prioridade de segurança, bypass, whitelist, permissões de regra/alias, namespaces, limites de palavras, ciclos/duplicações, JSON inválido, backup, auditoria sem argumentos sensíveis, filtragem Brigadier e contrato de consulta da API LuckPerms.
 
 Os seis testes da API LuckPerms usam interfaces oficiais com proxies controlados: TRUE, FALSE, UNDEFINED, usuário não carregado, QueryOptions contextual e fallback estático. **Não comprovam execução com o plugin LuckPerms instalado**, nem grupos/herança do plugin real.
 
-As 75 assertions dedicadas exercitam as classes reais do Minecraft/Fabric e mixins carregados: bloqueio da entrada não assinada da rede, comando oculto executável, namespace, redirect alternativo, `execute run`, aliases com fonte do jogador e argumentos, sugestões (inclusive após espaço), subcomandos, prefixo fixo dinâmico, subaliases irmãos, exigência vanilla original, árvore efetiva de `CommandTreeS2CPacket` (incluindo ancestral bloqueado como contêiner não executável para um filho permitido), whitelist, backup, reload, JSON inválido, permissões administrativas, console e proteção opcional de chamadas internas. O jogador é simulado e o handler captura pacotes; não há cliente autenticado nesse teste.
+As 96 assertions dedicadas exercitam as classes reais do Minecraft/Fabric e mixins carregados: bloqueio da entrada não assinada da rede, comando oculto executável, namespace, redirect alternativo, `execute run`, aliases com fonte do jogador e argumentos, sugestões (inclusive após espaço), subcomandos, prefixo fixo dinâmico, subaliases irmãos, exigência vanilla original, árvore efetiva de `CommandTreeS2CPacket` (incluindo ancestral bloqueado como contêiner não executável para um filho permitido), whitelist, backup, reload, JSON inválido, permissões administrativas, console e proteção opcional de chamadas internas. O jogador é simulado e o handler captura pacotes; não há cliente autenticado nesse teste.
 
 O servidor de testes funciona em modo offline/loopback. Houve aviso de consulta às chaves públicas Mojang por DNS indisponível no processo Java; autenticação online não foi validada. Isso não impediu as assertions locais nem o encerramento limpo.
 
@@ -62,3 +62,11 @@ Os testes dedicados inserem perfis simulados na lista real do `PlayerManager` du
 ## Ocultar todas as sugestões de uma posição
 
 `hideAll` foi coberto por oito novos testes unitários e quatro verificações dedicadas. A resposta real de completions do comando de teste `/sctafterpay 10 PolicyTest cash ` fica vazia na quarta posição, mesmo com nomes de jogadores online no provedor. Jogadores na segunda posição e moedas curtas na terceira continuam sendo sugeridos. A execução manual de argumento extra permanece a cargo da implementação original. As verificações usam comandos/provedores simulados dentro do Minecraft Fabric 1.21.1, sem declarar teste com o Impactor instalado.
+
+## Aliases com argumentos nomeados
+
+Foram adicionados 27 testes unitários e 21 verificações dedicadas para padrões de entrada/destino com argumentos reorganizados. Incluem aspas/escapes, namespaces e seletores preservados lexicalmente, quantidade exata de argumentos, campos ausentes/repetidos, ciclos/encadeamento, conflitos de IDs e literais já registrados, permissão do destino e bloqueios/HIDE da rota de entrada.
+
+O servidor de integração executa `sctpay cash 123 Alice` na implementação original com os valores reorganizados e a mesma fonte do jogador, conserva a sintaxe original, consulta sugestões de jogadores na posição traduzida e aplica filtros online/moeda ao destino. Foram verificados um comando independente, um parser real de Identifier para `minecraft:stone`, execução dentro de `/execute`, sugestões estáticas quando não há dados suficientes para consultar o provedor original, reload sem duplicação e remoção via `/sc remove` preservando os comandos originais e aliases irmãos.
+
+`./gradlew test` e `./gradlew build` passaram; a suíte dedicada terminou com 96 assertions aprovadas. Esses testes usam comandos/provedores de teste no Fabric/Minecraft real. Impactor, WorldEdit e os demais mods instalados não foram executados na mesma suíte; não se declara compatibilidade comprovada com todos os parsers, forks ou alterações dinâmicas de registro.

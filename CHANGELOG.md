@@ -10,6 +10,8 @@ Novo `onlinePlayersOnly` opcional em `tabFilters`: interseção das sugestões o
 
 Novo `hideAll` em `tabFilters` para deixar uma posição sem sugestões, inclusive jogadores online, sem interferir nas posições anteriores ou na execução manual.
 
+Novo `argumentAliases` genérico com placeholders nomeados, reorganização de argumentos, extensão aditiva de raízes existentes, sugestões do destino, permissões originais e integração com os filtros de TAB. `list` e `remove` também tratam os novos IDs.
+
 Implementação inicial para Fabric 1.21.1 / Java 21:
 
 - Políticas HIDE, BLOCK, REPLACE e ALLOW, whitelist e permissões por regra.

@@ -29,6 +29,9 @@ public class DedicatedServerTests implements ModInitializer {
   private MinecraftServer server;
   private boolean failed;
   private String echoed;
+  private int paidAmount;
+  private String paidTarget, paidCurrency, rawItem;
+  private net.minecraft.server.command.ServerCommandSource payer;
   private final Path result = Path.of("test-result.txt");
 
   public void onInitialize() {
@@ -128,11 +131,21 @@ public class DedicatedServerTests implements ModInitializer {
                                                           .suggest("impactor:dollars")
                                                           .buildFuture())
                                               .executes(
-                                                  ctx ->
-                                                      StringArgumentType.getString(ctx, "currency")
-                                                              .equals("impactor:cash")
-                                                          ? 43
-                                                          : 44)))));
+                                                  ctx -> {
+                                                    paidAmount =
+                                                        com.mojang.brigadier.arguments
+                                                            .IntegerArgumentType.getInteger(
+                                                            ctx, "amount");
+                                                    paidTarget =
+                                                        StringArgumentType.getString(ctx, "target");
+                                                    paidCurrency =
+                                                        StringArgumentType.getString(
+                                                            ctx, "currency");
+                                                    payer = ctx.getSource();
+                                                    return paidCurrency.equals("impactor:cash")
+                                                        ? 43
+                                                        : 44;
+                                                  })))));
           d.register(
               literal("sctafterpay")
                   .then(
@@ -155,6 +168,23 @@ public class DedicatedServerTests implements ModInitializer {
                                               argument("extra", StringArgumentType.word())
                                                   .suggests((ctx, b) -> playerNames(b))
                                                   .executes(ctx -> 47))))));
+          d.register(
+              literal("sctitem")
+                  .then(
+                      argument("player", StringArgumentType.word())
+                          .then(
+                              argument(
+                                      "item",
+                                      net.minecraft.command.argument.IdentifierArgumentType
+                                          .identifier())
+                                  .executes(
+                                      c -> {
+                                        rawItem =
+                                            net.minecraft.command.argument.IdentifierArgumentType
+                                                .getIdentifier(c, "item")
+                                                .toString();
+                                        return 49;
+                                      }))));
           d.register(literal("sctaliaspay").redirect(pay));
           d.register(literal("economy:sctpay").redirect(pay));
           d.register(literal("scteconomy").then(literal("pay").redirect(pay)));
@@ -448,6 +478,89 @@ public class DedicatedServerTests implements ModInitializer {
               .toList()
               .equals(expected),
           "Alias argument offsets expand to original online filter");
+      check(
+          server.getCommandManager().getDispatcher().getRoot().getChild("sctpay").getChild("cash")
+              != null,
+          "Ordered alias extends existing root with a new literal");
+      check(
+          requestSuggestions("/sctpay ").getList().stream()
+              .map(v -> v.getText())
+              .collect(java.util.stream.Collectors.toSet())
+              .containsAll(Set.of("cash", "tokens", "dollars")),
+          "Currency literal branches are suggested");
+      invoke("sctpay cash 123 Alice");
+      check(
+          paidAmount == 123 && paidTarget.equals("Alice") && paidCurrency.equals("cash"),
+          "Named alias reorders arguments into original payment command");
+      check(payer.getPlayer() == player, "Named alias preserves original player source");
+      check(
+          dispatcher.execute("sctitems minecraft:stone Alice", source) == 49
+              && rawItem.equals("minecraft:stone"),
+          "Named aliases preserve unquoted namespaced data for original identifier parser");
+      server
+          .getCommandManager()
+          .executeWithPrefix(source.withLevel(2), "execute run sctpay cash 987 PolicyTest");
+      check(
+          paidAmount == 987 && paidTarget.equals("PolicyTest") && payer.getPlayer() == player,
+          "Named alias inside execute retains context and extracts redirected input");
+      invoke("sctpay tokens 234 Bob");
+      check(
+          paidAmount == 234 && paidTarget.equals("Bob") && paidCurrency.equals("tokens"),
+          "Sibling token alias selects its fixed currency");
+      check(
+          dispatcher.execute("sctpay 345 Alice dollars", source) == 44
+              && paidAmount == 345
+              && paidCurrency.equals("dollars"),
+          "Original payment syntax remains executable");
+      check(
+          requestSuggestions("/sctpay cash 10 ").getList().stream()
+              .map(v -> v.getText())
+              .toList()
+              .equals(expected),
+          "Reordered player suggestions retain original online filter");
+      check(
+          requestSuggestions("/sctstatic ").getList().stream()
+              .map(v -> v.getText())
+              .collect(java.util.stream.Collectors.toSet())
+              .equals(Set.of("cash", "tokens", "dollars")),
+          "Static named-argument suggestions respect target currency prefix filter");
+      check(
+          dispatcher.execute("sctmessage \"hello there\" Alice", source) == 45,
+          "Named aliases work for another command and quoted arguments");
+      check(
+          !mod.decision(source, "sctordereddenied 10").execute(),
+          "Named alias cannot bypass original root permission");
+      check(
+          !mod.decision(source, "sctorderedblocked").execute(),
+          "Named alias cannot bypass explicit target block");
+      check(
+          !mod.decision(source, "sctrouteblocked 10").execute(),
+          "Explicit block on named alias input route is preserved");
+      var hiddenDecision = mod.decision(source, "sctroutehidden 456");
+      check(
+          hiddenDecision.execute() && !hiddenDecision.visible(),
+          "Explicit HIDE on named alias input route stays executable and invisible");
+      invoke("sctroutehidden 456");
+      check(paidAmount == 456, "Hidden named alias manually executes original target");
+      int oldAmount = paidAmount;
+      try {
+        dispatcher.execute("sctpay cash invalid Alice", source);
+        throw new AssertionError("Invalid amount reached original implementation");
+      } catch (com.mojang.brigadier.exceptions.CommandSyntaxException expectedSyntax) {
+        check(paidAmount == oldAmount, "Original argument type validation is preserved");
+      }
+      var conflict = new com.shirokai.commands.config.CommandConfig.ArgumentAlias();
+      conflict.alias = "sctkit claim {amount}";
+      conflict.target = "sctpay {amount} Alice cash";
+      conflict.extendExisting = true;
+      check(
+          mod.mutate(
+                      server.getCommandSource(),
+                      "conflict test",
+                      next -> next.argumentAliases.put("conflict", conflict))
+                  == 0
+              && !mod.config().argumentAliases.containsKey("conflict"),
+          "Existing mod literal conflicts are rejected before saving");
       connected.remove(actors.get(2));
       check(
           requestSuggestions(playerInput).getList().stream()
@@ -539,6 +652,23 @@ public class DedicatedServerTests implements ModInitializer {
           Path.of("config/shirokai-commands.json.bak"),
           Path.of("config/shirokai-commands.json"),
           StandardCopyOption.REPLACE_EXISTING);
+      server
+          .getCommandManager()
+          .getDispatcher()
+          .execute("sc remove ordered_cash", server.getCommandSource());
+      stage = 4;
+      ticks = 0;
+    } else if (stage == 4 && !mod.config().argumentAliases.containsKey("ordered_cash")) {
+      var d = server.getCommandManager().getDispatcher();
+      check(
+          d.getRoot().getChild("sctpay").getChild("cash") == null,
+          "Reload removes only the owned literal branch");
+      check(
+          d.getRoot().getChild("sctpay").getChild("tokens") != null,
+          "Reload preserves sibling argument aliases");
+      check(
+          d.execute("sctpay 678 Alice cash", source) == 44 && paidAmount == 678,
+          "Original command survives template removal and reload");
       Files.writeString(result, "PASS " + count + " assertions\n");
       stage = 0;
       server.stop(false);

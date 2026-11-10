@@ -36,6 +36,7 @@ public final class ShirokaiCommands implements ModInitializer {
       new TabSuggestionFilter(config.tabFilters);
   private final LuckPermsBridge permissions = new LuckPermsBridge();
   private final AliasManager aliases = new AliasManager();
+  private final ArgumentAliasManager argumentAliases = new ArgumentAliasManager();
   private final TabRefreshManager tabs = new TabRefreshManager();
   private final CommandAuditLogger audit =
       new CommandAuditLogger(
@@ -81,7 +82,7 @@ public final class ShirokaiCommands implements ModInitializer {
         s -> {
           server = s;
           try {
-            aliases.validate(config, s.getCommandManager().getDispatcher());
+            validateAliases(config, s.getCommandManager().getDispatcher());
             apply(config);
           } catch (Exception e) {
             config = new CommandConfig();
@@ -101,7 +102,7 @@ public final class ShirokaiCommands implements ModInitializer {
         (s, resources, success) -> {
           if (success) {
             try {
-              aliases.validate(config, s.getCommandManager().getDispatcher());
+              validateAliases(config, s.getCommandManager().getDispatcher());
               apply(config);
             } catch (Exception e) {
               LOGGER.error("Alias activation after data reload failed", e);
@@ -125,6 +126,12 @@ public final class ShirokaiCommands implements ModInitializer {
           }
           audit.close();
         });
+  }
+
+  private void validateAliases(
+      CommandConfig next, com.mojang.brigadier.CommandDispatcher<ServerCommandSource> dispatcher) {
+    aliases.validate(next, dispatcher);
+    argumentAliases.validate(next, dispatcher, aliases);
   }
 
   private void indexRoutes() {
@@ -184,6 +191,23 @@ public final class ShirokaiCommands implements ModInitializer {
 
   public CommandRuleEngine.Decision decision(ServerCommandSource source, String input) {
     var subject = permissions.subject(source, config);
+    var named = argumentAliases.match(input);
+    if (named != null) {
+      String expanded = named.projection().command();
+      var target = engine.evaluate(expanded, subject);
+      boolean allowed = argumentAliasAllowed(source, named.template());
+      var routePolicy = engine.evaluate(input, subject);
+      boolean explicit = !routePolicy.rule().equals("default");
+      return new CommandRuleEngine.Decision(
+          allowed && target.execute() && (!explicit || routePolicy.execute()),
+          allowed && target.visible() && (!explicit || routePolicy.visible()),
+          explicit && !routePolicy.execute()
+              ? routePolicy.rule()
+              : "argumentAliases." + named.template().id(),
+          explicit && routePolicy.message() != null ? routePolicy.message() : target.message(),
+          expanded,
+          true);
+    }
     var direct = engine.evaluate(input, subject);
     // A real alias is evaluated before route canonicalization; the original permissions are checked
     // by Brigadier.
@@ -195,6 +219,7 @@ public final class ShirokaiCommands implements ModInitializer {
     String root = CommandPath.clean(path).split(" ")[0];
     if (aliases.installed(root) && !activeAlias(path)) return false;
     var d = decision(source, path);
+    if (argumentAliases.match(path) != null) return d.visible();
     if (d.alias()) {
       String alias = null;
       for (var r : config.commands.values())
@@ -203,7 +228,7 @@ public final class ShirokaiCommands implements ModInitializer {
       return d.visible() && alias != null && aliasAllowed(source, alias);
     }
     if (d.visible()) return true;
-    if (aliasPrefixAllowed(source, path)) return true;
+    if (aliasPrefixAllowed(source, path) || argumentAliasPrefixVisible(source, path)) return true;
     // Non-executable containers may still lead to a more specific permitted child.
     for (var e : config.commands.entrySet())
       if (CommandPath.prefix(e.getKey(), CommandPath.canonical(path))
@@ -233,6 +258,58 @@ public final class ShirokaiCommands implements ModInitializer {
     var parse =
         source.getServer().getCommandManager().getDispatcher().parse(decision.expanded(), source);
     return !parse.getReader().canRead() && parse.getExceptions().isEmpty();
+  }
+
+  public boolean argumentAliasAllowed(ServerCommandSource source, ArgumentTemplate template) {
+    var subject = permissions.subject(source, config);
+    boolean permission =
+        subject.console() || subject.bypass() || subject.permission().test(template.permission());
+    var match = template.match(String.join(" ", template.prefix()));
+    var routePolicy = engine.evaluate(String.join(" ", template.prefix()), subject);
+    return permission
+        && (routePolicy.rule().equals("default") || routePolicy.execute())
+        && engine.evaluate(match.projection().command(), subject).execute()
+        && argumentAliases.originalAllows(template, source);
+  }
+
+  public boolean argumentAliasPrefixAllowed(ServerCommandSource source, String prefix) {
+    for (var t : argumentAliases.templates())
+      if (CommandPath.prefix(String.join(" ", t.prefix()), prefix)
+          && argumentAliasAllowed(source, t)) return true;
+    return false;
+  }
+
+  private boolean argumentAliasPrefixVisible(ServerCommandSource source, String prefix) {
+    var subject = permissions.subject(source, config);
+    for (var template : argumentAliases.templates()) {
+      String path = String.join(" ", template.prefix());
+      var route = engine.evaluate(path, subject);
+      if (CommandPath.prefix(path, prefix)
+          && argumentAliasAllowed(source, template)
+          && engine.evaluate(template.match(path).projection().command(), subject).visible()
+          && (route.rule().equals("default") || route.visible())) return true;
+    }
+    return false;
+  }
+
+  public int executeArgumentAlias(String id, ServerCommandSource source, String input)
+      throws CommandSyntaxException {
+    var match = argumentAliases.match(input);
+    if (match == null || !match.template().id().equals(id) || !match.complete()) {
+      var template =
+          argumentAliases.templates().stream().filter(t -> t.id().equals(id)).findFirst();
+      source.sendError(
+          Text.literal(
+              template
+                  .map(t -> "Uso: /" + t.spec().alias)
+                  .orElse("Alias recarregado ou removido.")));
+      return 0;
+    }
+    if (!allow(source, input)) return 0;
+    String target = match.template().expand(match);
+    if (!com.shirokai.commands.security.CommandExecutionGuard.redirectsAllowed(source, target))
+      return 0;
+    return argumentAliases.executeOriginal(target, source);
   }
 
   public boolean allow(ServerCommandSource source, String input) {
@@ -274,18 +351,33 @@ public final class ShirokaiCommands implements ModInitializer {
       if (prefix == 1) candidate = CommandPath.fromUser(candidate);
       if (!visible(source, candidate)) continue;
       String expanded = decision(source, candidate).expanded();
-      int offset = expanded.length() - candidate.length() - prefix;
-      int start = Math.max(0, suggestion.getRange().getStart() + offset);
-      int end =
-          Math.max(
-              start, suggestion.getRange().getStart() + suggestion.getText().length() + offset);
+      int start, end;
+      var named = argumentAliases.match(candidate);
+      if (named != null) {
+        var projection = named.projection();
+        expanded = projection.command();
+        int[] range =
+            projection.range(
+                suggestion.getRange().getStart() - prefix,
+                suggestion.getRange().getStart() - prefix + suggestion.getText().length());
+        start = range[0];
+        end = range[1];
+      } else {
+        int offset = expanded.length() - candidate.length() - prefix;
+        start = Math.max(0, suggestion.getRange().getStart() + offset);
+        end =
+            Math.max(
+                start, suggestion.getRange().getStart() + suggestion.getText().length() + offset);
+      }
       if (argumentSuggestions.visible(expanded, start, end, onlineNames)) kept.add(suggestion);
     }
     return new Suggestions(suggestions.getRange(), kept);
   }
 
   private void apply(CommandConfig next) {
+    argumentAliases.restore(server.getCommandManager().getDispatcher());
     aliases.install(next, server.getCommandManager().getDispatcher());
+    argumentAliases.install(next, server.getCommandManager().getDispatcher());
     config = next;
     engine = new CommandRuleEngine(next);
     argumentSuggestions = new TabSuggestionFilter(next.tabFilters);
@@ -302,7 +394,7 @@ public final class ShirokaiCommands implements ModInitializer {
     try {
       update.accept(next);
       ConfigManager.validate(next);
-      aliases.validate(next, server.getCommandManager().getDispatcher());
+      validateAliases(next, server.getCommandManager().getDispatcher());
     } catch (Exception e) {
       source.sendError(Text.literal(e.getMessage()));
       return 0;
@@ -341,7 +433,7 @@ public final class ShirokaiCommands implements ModInitializer {
             server.execute(
                 () -> {
                   try {
-                    aliases.validate(next, server.getCommandManager().getDispatcher());
+                    validateAliases(next, server.getCommandManager().getDispatcher());
                     apply(next);
                     source.sendFeedback(() -> Text.literal(next.messages.reload), false);
                     if (next.settings.logBlockedCommands) audit.admin(source.getName(), "reload");

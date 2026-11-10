@@ -29,6 +29,8 @@ Aceite a EULA do Minecraft somente se estiver de acordo. O runner de integraçã
 - `filter/TabSuggestionFilter`: filtros cosméticos por argumento/range, prefixos e snapshot de nomes online; não altera execução.
 - `filter/CommandFilter`: cópia filtrada da árvore; não modifica o dispatcher original.
 - `security/CommandExecutionGuard`: entrada do jogador e cadeias de redirecionamento.
+- `alias/ArgumentTemplate`: padrões com placeholders e projeção dos ranges para a ordem original; a projeção parcial nunca é despachada.
+- `alias/ArgumentAliasManager`: extensões aditivas de raízes, detecção de conflitos e execução na árvore original com a mesma fonte.
 - `alias/AliasManager`: registro, encaminhamento de argumentos e sugestões.
 - `permission/LuckPermsBridge`: carregamento opcional e assinatura de eventos.
 - `permission/LuckPermsPermissionService`: consulta contextual oficial, isolada para testes.
