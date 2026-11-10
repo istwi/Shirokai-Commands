@@ -1,0 +1,44 @@
+# Validação — 1.0.0+1.21.1
+
+Verificação local em 10/11/2026. Não há tag, push ou release publicada.
+
+## Resultados executados
+
+| Verificação | Resultado |
+| --- | --- |
+| JDK 21, Loom 1.8.13, Minecraft 1.21.1, Yarn build.3 | Compilação realizada |
+| `./gradlew build` | Sucesso; jar remapeado e fontes gerados |
+| Testes JUnit | 38 testes, zero falhas/erros/skips |
+| `python3 scripts/integration-test.py` | Servidor Fabric dedicado: 40 assertions aprovadas |
+| `./gradlew runServer --args nogui` | Inicialização normal atingiu `Done`, sem mod auxiliar de teste; encerramento limpo |
+| Metadados do jar | Ambiente `server`; mod auxiliar de teste ausente |
+| Checksums Gradle e JDK | Conferidos antes de usar os arquivos baixados |
+| GitHub Actions | Arquivos criados; execução remota ainda não realizada |
+
+Os 38 testes JUnit abrangem: modos HIDE/BLOCK/REPLACE, ALLOW e prioridade de segurança, bypass, whitelist, permissões de regra/alias, namespaces, limites de palavras, ciclos/duplicações, JSON inválido, backup, auditoria sem argumentos sensíveis, filtragem Brigadier e contrato de consulta da API LuckPerms.
+
+Os seis testes da API LuckPerms usam interfaces oficiais com proxies controlados: TRUE, FALSE, UNDEFINED, usuário não carregado, QueryOptions contextual e fallback estático. **Não comprovam execução com o plugin LuckPerms instalado**, nem grupos/herança do plugin real.
+
+As 40 assertions dedicadas exercitam as classes reais do Minecraft/Fabric e mixins carregados: bloqueio da entrada não assinada da rede, comando oculto executável, namespace, redirect alternativo, `execute run`, aliases com fonte do jogador e argumentos, sugestões (inclusive após espaço), subcomandos, prefixo fixo dinâmico, subaliases irmãos, exigência vanilla original, árvore efetiva de `CommandTreeS2CPacket` (incluindo ancestral bloqueado como contêiner não executável para um filho permitido), whitelist, backup, reload, JSON inválido, permissões administrativas, console e proteção opcional de chamadas internas. O jogador é simulado e o handler captura pacotes; não há cliente autenticado nesse teste.
+
+O servidor de testes funciona em modo offline/loopback. Houve aviso de consulta às chaves públicas Mojang por DNS indisponível no processo Java; autenticação online não foi validada. Isso não impediu as assertions locais nem o encerramento limpo.
+
+## Pendências obrigatórias antes de v1.0.0
+
+1. **LuckPerms instalado:** carregar a distribuição Fabric compatível com 1.21.1 e testar usuário/grupo/herança/contextos, permissões negativas, bypass e evento de recálculo reenviando o TAB. A consulta à distribuição via `api.modrinth.com` recebeu bloqueio 403 do proxy deste ambiente. Adicione esse domínio na configuração de rede para prosseguir com o download oficial; `cdn.modrinth.com` já consta na política observada.
+2. **Sessão de cliente vanilla:** conectar um cliente 1.21.1 sem o mod e verificar TAB, argumentos dinâmicos, original/alias, alteração de cargo durante sessão e entrada de comandos assinados. O hook assinado compila e carrega, mas não foi exercitado com uma sessão autenticada.
+3. Depois dos testes, registrar a evidência aqui e atualizar os campos correspondentes em `docs/release-readiness.json`. `scripts/check-release.py` bloqueia o workflow de publicação enquanto os requisitos obrigatórios estiverem falsos; não altere esses campos apenas para fazer o workflow passar.
+
+## Compatibilidade adicional ainda não testada
+
+Cobblemon 1.8.3, SkiesShop, GTS, Kits e outros mods precisam de teste com suas versões reais. Não são dependências obrigatórias nem compatibilidade declarada como comprovada. Verifique especialmente aliases independentes, nós dinâmicos, forks e provedores de sugestões.
+
+## Artefatos e reprodução
+
+- Jar: `build/libs/shirokai-commands-1.0.0+1.21.1.jar`.
+- Fontes: `build/libs/shirokai-commands-1.0.0+1.21.1-sources.jar`.
+- Relatório JUnit: `build/reports/tests/test/index.html`.
+- Resultado da integração: `run/integration/test-result.txt`.
+- Log da integração: `run/integration/logs/latest.log`.
+
+Use JDK 21 e execute `./gradlew build` e `python3 scripts/integration-test.py`. O runner remove o resultado anterior e rejeita execução sem assertions. O servidor de teste é encerrado pelo próprio teste; ele não fica como serviço persistente. Veja detalhes do ambiente em [DEVELOPING.md](DEVELOPING.md).

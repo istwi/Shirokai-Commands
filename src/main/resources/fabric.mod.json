@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "shirokai_commands",
+  "version": "${version}",
+  "name": "Shirokai Commands",
+  "description": "Server-side command policy, aliases and auditing.",
+  "authors": ["Shirokai"],
+  "license": "MIT",
+  "environment": "server",
+  "entrypoints": {"main": ["com.shirokai.commands.ShirokaiCommands"]},
+  "mixins": ["shirokai-commands.mixins.json"],
+  "depends": {"fabricloader": ">=0.16.14", "minecraft": "~1.21.1", "java": ">=21", "fabric-api": "*"},
+  "suggests": {"luckperms": "*"}
+}

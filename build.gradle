@@ -1,0 +1,61 @@
+plugins {
+    id 'fabric-loom' version '1.8.13'
+    id 'maven-publish'
+}
+version = '1.0.0+1.21.1'
+group = 'com.shirokaicommands'
+base { archivesName = 'shirokai-commands' }
+repositories { mavenCentral() }
+dependencies {
+    minecraft 'com.mojang:minecraft:1.21.1'
+    mappings 'net.fabricmc:yarn:1.21.1+build.3:v2'
+    modImplementation 'net.fabricmc:fabric-loader:0.16.14'
+    modImplementation 'net.fabricmc.fabric-api:fabric-api:0.116.6+1.21.1'
+    compileOnly 'net.luckperms:api:5.4'
+    testImplementation 'net.luckperms:api:5.4'
+    testImplementation 'org.junit.jupiter:junit-jupiter:5.11.4'
+    testRuntimeOnly 'org.junit.platform:junit-platform-launcher'
+}
+loom {
+    serverOnlyMinecraftJar()
+    runs { server { runDir 'run'; vmArg '-Dcom.mojang.eula.agree=true' } }
+}
+processResources {
+    inputs.property 'version', project.version
+    filesMatching('fabric.mod.json') { expand 'version': project.version }
+}
+tasks.withType(JavaCompile).configureEach { options.release = 21 }
+java { withSourcesJar(); sourceCompatibility = JavaVersion.VERSION_21; targetCompatibility = JavaVersion.VERSION_21 }
+test { useJUnitPlatform() }
+tasks.withType(AbstractArchiveTask).configureEach {
+    preserveFileTimestamps = false
+    reproducibleFileOrder = true
+}
+jar { from('LICENSE') }
+
+
+sourceSets {
+    integrationTest {
+        compileClasspath += sourceSets.main.output + sourceSets.main.compileClasspath
+        runtimeClasspath += sourceSets.main.output + sourceSets.main.runtimeClasspath
+    }
+}
+configurations {
+    integrationTestImplementation.extendsFrom implementation
+    integrationTestRuntimeOnly.extendsFrom runtimeOnly
+}
+loom {
+    mods {
+        shirokai_commands { sourceSet sourceSets.main }
+        shirokai_commands_test { sourceSet sourceSets.integrationTest }
+    }
+    runs {
+        integrationServer {
+            server()
+            source sourceSets.integrationTest
+            runDir 'run/integration'
+            vmArg '-Dcom.mojang.eula.agree=true'
+            programArg 'nogui'
+        }
+    }
+}

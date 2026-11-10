@@ -1,0 +1,157 @@
+# Shirokai Commands
+
+Mod **server-side** para Minecraft **1.21.1**, Fabric e Java **21**. Gerencia visibilidade, execução, aliases, whitelist e auditoria de comandos por jogador. Não precisa ser instalado nos clientes.
+
+**Estado:** implementação em validação; ainda não há release publicada. Resultados e pendências reais em [docs/VALIDATION.md](docs/VALIDATION.md). Compatibilidade com Cobblemon 1.8.3, SkiesShop, GTS e Kits ainda não foi comprovada. Nenhum deles é dependência obrigatória.
+
+## Requisitos e instalação
+
+Versões usadas na compilação e nos testes: Fabric Loader **0.16.14**, Fabric API **0.116.6+1.21.1**, Yarn **1.21.1+build.3**, Loom **1.8.13**, Gradle **8.10.2**, JDK **21**. A integração opcional usa a API oficial LuckPerms **5.4**, sem empacotá-la no jar.
+
+1. Prepare um servidor dedicado Fabric 1.21.1 com Java 21 e Fabric API.
+2. Coloque `shirokai-commands-1.0.0+1.21.1.jar` em `mods/` do servidor.
+3. Opcionalmente instale LuckPerms para Fabric compatível com essa versão.
+4. Inicie o servidor. O arquivo `config/shirokai-commands.json` será criado automaticamente com política permissiva e nenhuma regra.
+5. Configure regras pelo JSON ou pelos comandos administrativos. Teste com um jogador sem OP e sem bypass.
+
+O exemplo em [config/shirokai-commands.example.json](config/shirokai-commands.example.json) contém comandos de outros mods: só ative substituições quando seus comandos originais estiverem registrados. O arquivo não é copiado automaticamente para a configuração ativa.
+
+## Modos e prioridade
+
+| Modo | TAB | Execução manual |
+| --- | --- | --- |
+| `hide` | Oculto | Permitida, respeitando as permissões originais |
+| `block` | Oculto | Bloqueada antes da implementação original |
+| `replace` | Original oculto, alias permitido visível | Original bloqueado; alias usa a mesma fonte e permissões |
+| `allow` | Visível quando o comando original é acessível | Permitida pela política; permissões originais continuam valendo |
+
+Ordem: proteção de `/sc` e `/shirokaicommands` contra regras; console; bypass autorizado; `block` com `security: true`; regra mais específica de subcomando; substituição; ocultação; política padrão. Entre regras sobrepostas, o caminho mais específico vence, exceto bloqueios `security`. Um ancestral bloqueado com um filho explicitamente permitido pode aparecer no TAB apenas como contêiner, sem marcador de execução; o comando do ancestral continua bloqueado. Não é permitido criar regras para os comandos administrativos protegidos; a permissão administrativa continua obrigatória.
+
+Uma permissão positiva **não anula BLOCK** nem concede o comando original de REPLACE. Para isso existe o bypass. Permissões individuais de comandos restringem ALLOW/REPLACE e permissões de alias restringem o alias. HIDE não é convertido em bloqueio por permissão da política; somente a permissão original do comando controla sua execução.
+
+## JSON
+
+```json
+{
+  "configVersion": 1,
+  "settings": {
+    "opBypass": true,
+    "defaultMode": "allow",
+    "whitelistEnabled": false,
+    "autoRefreshTab": true,
+    "luckPermsIntegration": true,
+    "logBlockedCommands": true,
+    "silentBlockedCommands": false,
+    "guardInternalPlayerCommands": false
+  },
+  "messages": {
+    "blocked": "§cVocê não tem permissão para usar este comando.",
+    "unknown": "§cComando desconhecido.",
+    "reload": "§aConfigurações recarregadas com sucesso.",
+    "aliasConflict": "§cEste alias já está sendo utilizado."
+  },
+  "commands": {
+    "calculate": {"mode": "hide"},
+    "center": {"mode": "block", "message": "§cUse os recursos do servidor."},
+    "balance": {"mode": "replace", "alias": "money"},
+    "warp spawn": {"mode": "replace", "alias": "spawn"},
+    "kit": {"mode": "allow"},
+    "kit admin": {"mode": "block", "security": true}
+  }
+}
+```
+
+`defaultMode` aceita `allow` ou `block`. Whitelist habilitada bloqueia os comandos sem regra, independentemente do modo padrão. ALLOW libera explicitamente um caminho e seus descendentes; uma regra mais específica pode restringi-los. HIDE continua executável mesmo em whitelist. Em blacklist, mantenha `defaultMode: "allow"` e cadastre os bloqueios desejados.
+
+Cada regra aceita `permission` para substituir o node gerado automaticamente, `message` para a recusa e `security` em BLOCK para impedir exceções em subcaminhos. `security` também respeita o bypass autorizado, conforme a prioridade definida. Caminhos não incluem `/`; o nome raiz é canônico em minúsculas. Argumentos preservam a caixa. IDs de permissão substituem espaços e pontuação por pontos: `kit admin` → `kit.admin`; colisões desses IDs são rejeitadas.
+
+A configuração é validada antes de ser aplicada. Alterações administrativas usam gravação atômica no mesmo diretório e backup `.bak`, fora da thread principal. Reload inválido mantém a configuração anterior em memória. Se a configuração inicial for inválida, entra uma política de bloqueio padrão; console e administração autorizada permanecem disponíveis para corrigir e recarregar. O JSON inválido não é sobrescrito automaticamente.
+
+## Administração
+
+`/shirokaicommands` e `/sc` oferecem:
+
+```text
+/sc help
+/sc hide "calculate"
+/sc block "kit admin"
+/sc replace "warp spawn" "spawn"
+/sc replace "kit claim inicial" "kitinicial"
+/sc allow "kit claim"
+/sc remove "kit.admin"
+/sc whitelist on
+/sc whitelist off
+/sc list
+/sc inspect "kit admin"
+/sc test Jogador "warp spawn"
+/sc reload
+```
+
+Use aspas em caminhos com espaços. `remove` aceita o caminho exato ou seu ID de permissão. Regras duplicadas são rejeitadas; remova uma regra antes de cadastrar outra para o mesmo caminho. `inspect` avalia com a fonte de quem consulta; `test` usa a fonte do jogador online indicado. São simulações: não executam o comando e informam separadamente a política e a possibilidade de parse do original. Uma consulta feita pelo console informa seu bypass, portanto use `test` para avaliar jogadores.
+
+Alterações só são confirmadas depois da gravação; outra alteração concorrente é recusada enquanto houver uma gravação pendente. O TAB é reenviado após alteração/reload. A opção `autoRefreshTab` controla os eventos automáticos de permissões e mudança de mundo; reload administrativo sempre atualiza.
+
+## LuckPerms e fallback
+
+| Permissão | Finalidade | Padrão quando indefinida |
+| --- | --- | --- |
+| `shirokaicommands.admin` | Administração completa | OP nível 4 / console |
+| `shirokaicommands.reload` | Recarregar sem administração completa | OP nível 4 / console |
+| `shirokaicommands.bypass` | Ver e executar originais restritos | Não concedido; `opBypass` pode liberar OP nível 4 |
+| `shirokaicommands.command.<id>` | Restringir ALLOW/REPLACE | Permitido |
+| `shirokaicommands.alias.<id-original>` | Restringir o alias | Permitido |
+
+O mod consulta `CachedPermissionData` com as `QueryOptions` contextuais do próprio LuckPerms. Grupos e herança ficam sob responsabilidade do LuckPerms. FALSE explícito prevalece sobre o padrão. Durante indisponibilidade dos dados de um usuário carregado pelo LuckPerms, a checagem falha de forma restritiva. `opBypass: false` remove o bypass automático de OP; então conceda bypass apenas pelo node apropriado.
+
+Exemplos:
+
+```text
+/lp group admin permission set shirokaicommands.admin true
+/lp group admin permission set shirokaicommands.bypass true
+/lp group moderador permission set shirokaicommands.reload true
+/lp group default permission set shirokaicommands.command.kit.claim false
+/lp user Jogador permission set shirokaicommands.alias.warp.spawn false
+/lp group vip permission set shirokaicommands.alias.balance true server=shirokai
+```
+
+O último exemplo depende do contexto `server` configurado no seu LuckPerms. Não são feitas consultas remotas nem carregamentos bloqueantes durante comandos. Eventos `UserDataRecalculateEvent` solicitam nova árvore TAB na thread do servidor; mudança de mundo também solicita atualização. Permissões são reavaliadas na execução, sem cache próprio persistente.
+
+Sem LuckPerms, ou com integração desativada, administração usa nível vanilla 4 e console; `opBypass` controla OP, e os nodes por regra/alias usam o padrão permitido. As exigências originais do Brigadier continuam obrigatórias. Conceder um node Shirokai nunca eleva a permissão vanilla de um comando.
+
+## Aliases, subcomandos e segurança
+
+`balance → money`, `warp spawn → spawn`, `kit claim inicial → kitinicial` e `gts → mercado` preservam a fonte do jogador. Argumentos adicionais são anexados ao original; valores fixos do prefixo são reparsados pelo Brigadier. Sugestões do original são remapeadas para o texto do alias.
+
+Aliases devem usar literais minúsculos `[a-z0-9_-]`, separados por espaços. Não podem conflitar com raízes de comandos existentes, com caminhos originais gerenciados, nem com outro alias sobreposto. Ciclos são rejeitados por essa mesma validação. Subaliases irmãos, como `economia saldo` e `economia pagar`, podem compartilhar uma nova raiz. Alterações removem os nós anteriores das três tabelas internas do Brigadier antes do registro; a árvore original dos outros mods permanece intacta.
+
+A filtragem ocorre na construção de `CommandTreeS2CPacket`: nós ocultos são removidos antes do envio. Sugestões pedidas explicitamente ao servidor também são filtradas. As entradas de execução de comandos assinados e não assinados são verificadas; cadeias de redirecionamento como `execute ... run` são examinadas. Namespaces são normalizados para a política e redirecionamentos que apontam aos nós conhecidos também são tratados. Implementações que reutilizam o mesmo objeto executor são associadas quando identificáveis.
+
+**Limitações que exigem teste no seu conjunto de mods:**
+
+- Wrappers implementados por outro mod com lógica própria, nomes diferentes e executores independentes não podem ser inferidos automaticamente. Há aviso no log; cadastre regras para essas rotas e use `/sc test`.
+- Chamadas internas diretas a `CommandDispatcher.execute` não passam pela entrada de rede. `guardInternalPlayerCommands: true` estende a proteção às chamadas de `CommandManager.execute` com fonte de jogador, podendo afetar outros mods; console não é bloqueado. Chamadas diretas que evitam ambos continuam fora desse escopo.
+- Regras com valores de argumentos dinâmicos são avaliadas no texto concreto. Não é possível remover do pacote um único valor de um nó de argumento genérico; a filtragem da resposta de sugestões e o bloqueio de execução cuidam desses valores. Caminhos com argumentos entre aspas precisam corresponder ao texto real do comando.
+- Árvores/forks próprios, parsers especiais e provedores de sugestões de outros mods precisam de validação. O alias usa um argumento greedy para encaminhamento, portanto a árvore de argumentos original não é copiada integralmente ao cliente. Argumentos de chat assinados não são reassinados nem promovidos a mensagens seguras pelo alias.
+- A descoberta estrutural de regras ausentes/dinâmicas gera aviso. O original de uma substituição deve ter sua raiz registrada. O mod não cria comandos ausentes de dependências opcionais.
+- Cobblemon, SkiesShop, GTS, Kits e LuckPerms instalado em servidor real ainda exigem a matriz de validação documentada. Não há declaração de compatibilidade comprovada com esses mods.
+
+## Auditoria
+
+`logs/shirokai-commands/audit.log` registra horário UTC, UUID/nome, raiz do comando, regra e resultado BLOCK, além de operações administrativas. Todos os argumentos são ocultados; não se registra apenas uma lista de palavras como `password`, pois qualquer argumento pode conter informação sensível. Há limite de frequência por jogador e fila assíncrona limitada. Em saturação, registros podem ser descartados para proteger a thread principal; não é um sistema de auditoria forense sem perdas. Configure rotação externa do arquivo em produção. `logBlockedCommands: false` desativa a auditoria de bloqueios e alterações; `silentBlockedCommands` silencia recusas.
+
+## Compilar, testar e baixar
+
+```sh
+./gradlew build
+python3 scripts/integration-test.py
+```
+
+Use um **JDK** 21 completo. O wrapper verifica o SHA-256 da distribuição Gradle. O build gera `build/libs/shirokai-commands-1.0.0+1.21.1.jar` e um jar de fontes. Os testes unitários ficam em `build/reports/tests/test/index.html`. O runner de integração cria apenas arquivos ignorados em `run/integration`, usa um servidor offline restrito a loopback e exige um resultado novo `PASS`; um processo com exit code zero sem assertions não é aceito.
+
+No GitHub: abra **Actions → Build and tests → execução concluída → Artifacts** e baixe o artifact do mod. O artifact só é enviado depois de build e integração bem-sucedidos. Execuções comuns não criam releases.
+
+O workflow de release responde apenas a tags versionadas, verifica a correspondência com `build.gradle` e o changelog, executa os dois conjuntos de testes e anexa jar, fontes e SHA-256. O preflight bloqueia a publicação enquanto `docs/release-readiness.json` tiver verificações obrigatórias pendentes. Antes de criar `v1.0.0`, conclua a matriz pendente em [docs/VALIDATION.md](docs/VALIDATION.md). Nenhuma tag ou release foi criada nesta implementação.
+
+Para atualizar: pare o servidor, faça backup do JSON e do jar anterior, substitua o jar e reinicie. Confira os avisos de regras/aliases e teste com um jogador sem bypass. Mudanças apenas no JSON podem usar `/sc reload`.
+
+Detalhes de arquitetura e desenvolvimento: [docs/DEVELOPING.md](docs/DEVELOPING.md).

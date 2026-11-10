@@ -1,0 +1,7 @@
+{
+  "version": "1.0.0",
+  "dedicatedServer": true,
+  "unitAndIntegration": true,
+  "luckPermsLive": false,
+  "vanillaClientSession": false
+}

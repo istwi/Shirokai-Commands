@@ -1,0 +1,1 @@
+{"schemaVersion":1,"id":"shirokai_commands_test","version":"1.0.0","name":"Shirokai Commands Integration Tests","environment":"server","entrypoints":{"main":["com.shirokaicommands.test.DedicatedServerTests"]},"depends":{"shirokai_commands":"*"}}

@@ -1,0 +1,38 @@
+{
+  "configVersion": 1,
+  "settings": {
+    "opBypass": true,
+    "defaultMode": "allow",
+    "whitelistEnabled": false,
+    "autoRefreshTab": true,
+    "luckPermsIntegration": true,
+    "logBlockedCommands": true,
+    "silentBlockedCommands": false,
+    "guardInternalPlayerCommands": false
+  },
+  "messages": {
+    "blocked": "§cVocê não tem permissão para usar este comando.",
+    "unknown": "§cComando desconhecido.",
+    "reload": "§aConfigurações recarregadas com sucesso.",
+    "aliasConflict": "§cEste alias já está sendo utilizado."
+  },
+  "commands": {
+    "calculate": {
+      "mode": "hide"
+    },
+    "center": {
+      "mode": "block"
+    },
+    "balance": {
+      "mode": "replace",
+      "alias": "money"
+    },
+    "warp spawn": {
+      "mode": "replace",
+      "alias": "spawn"
+    },
+    "kit admin": {
+      "mode": "block"
+    }
+  }
+}

@@ -1,0 +1,28 @@
+name: Versioned release
+on:
+  push:
+    tags: ['v[0-9]*']
+permissions:
+  contents: write
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+      - uses: gradle/actions/setup-gradle@v4
+      - name: Verify tag and changelog
+        run: python3 scripts/check-release.py "$GITHUB_REF_NAME"
+      - run: ./gradlew build --console=plain
+      - run: python3 scripts/integration-test.py
+      - name: Publish tested jar and checksums
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          cd build/libs
+          sha256sum shirokai-commands-*.jar > SHA256SUMS
+          gh release create "$GITHUB_REF_NAME" shirokai-commands-*.jar SHA256SUMS --verify-tag --title "Shirokai Commands $GITHUB_REF_NAME" --notes-file ../../CHANGELOG.md
