@@ -91,6 +91,22 @@ Use aspas em caminhos com espaços. `remove` aceita o caminho exato ou seu ID de
 
 Alterações só são confirmadas depois da gravação; outra alteração concorrente é recusada enquanto houver uma gravação pendente. O TAB é reenviado após alteração/reload. A opção `autoRefreshTab` controla os eventos automáticos de permissões e mudança de mundo; reload administrativo sempre atualiza.
 
+## Comandos com duas barras (WorldEdit)
+
+Use a notação completa do chat nos comandos administrativos:
+
+```text
+/sc block "//wand"
+/sc block "//set"
+/sc hide "//paste"
+```
+
+O JSON armazena os nomes internos com **uma barra a menos**: `"/wand": {"mode": "block"}` corresponde a `//wand` no chat. A barra inicial do chat é removida exatamente uma vez; a barra que pertence ao comando é preservada. Assim `/wand` e `//wand` são comandos distintos.
+
+Se uma build anterior criou a regra `wand` ao receber `//wand`, remova essa regra (`/sc remove "wand"`) e cadastre novamente com `/sc block "//wand"`. Não é possível migrar automaticamente essa intenção sem confundir um comando normal com o WorldEdit.
+
+OP e `shirokaicommands.bypass` continuam ignorando as restrições por projeto. Para testar o TAB sem bypass, use uma conta comum ou configure `opBypass: false` e remova o bypass efetivo no LuckPerms. Após substituir o jar, reinicie o servidor; `/sc reload` recarrega apenas o JSON.
+
 ## LuckPerms e fallback
 
 | Permissão | Finalidade | Padrão quando indefinida |

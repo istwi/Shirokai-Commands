@@ -78,7 +78,8 @@ public final class AliasManager {
       ServerCommandSource source, String alias, SuggestionsBuilder builder) {
     var mod = ShirokaiCommands.get();
     String typed = builder.getInput();
-    var d = mod.decision(source, typed);
+    String nativeInput = com.shirokai.commands.util.CommandPath.fromUser(typed);
+    var d = mod.decision(source, nativeInput);
     if (!d.execute() || !d.alias()) return Suggestions.empty();
     String expanded = d.expanded();
     int delta = typed.length() - expanded.length();
@@ -101,7 +102,8 @@ public final class AliasManager {
                             String original =
                                 alias
                                     + next.substring(
-                                        expanded.length() - (typed.length() - alias.length()));
+                                        expanded.length()
+                                            - (nativeInput.length() - alias.length()));
                             if (mod.decision(source, original).visible())
                               out.suggest(s.getText(), s.getTooltip());
                           }

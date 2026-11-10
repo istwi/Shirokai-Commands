@@ -48,7 +48,8 @@ public final class AdminCommandManager {
                                   next -> {
                                     String key =
                                         CommandPath.canonical(
-                                            StringArgumentType.getString(c, "command"));
+                                            CommandPath.fromUser(
+                                                StringArgumentType.getString(c, "command")));
                                     if (next.commands.containsKey(key))
                                       throw new IllegalArgumentException(
                                           "Regra já existe; use remove primeiro: " + key);
@@ -69,14 +70,16 @@ public final class AdminCommandManager {
                                         next -> {
                                           String key =
                                               CommandPath.canonical(
-                                                  StringArgumentType.getString(c, "original"));
+                                                  CommandPath.fromUser(
+                                                      StringArgumentType.getString(c, "original")));
                                           if (next.commands.containsKey(key))
                                             throw new IllegalArgumentException(
                                                 "Regra já existe: " + key);
                                           var rule = new CommandConfig.Rule("replace");
                                           rule.alias =
                                               CommandPath.clean(
-                                                  StringArgumentType.getString(c, "alias"));
+                                                  CommandPath.fromUser(
+                                                      StringArgumentType.getString(c, "alias")));
                                           next.commands.put(key, rule);
                                         })))));
     root.then(
@@ -166,6 +169,7 @@ public final class AdminCommandManager {
   }
 
   private int inspect(ServerCommandSource output, ServerCommandSource subject, String input) {
+    input = CommandPath.fromUser(input);
     var d = mod.decision(subject, input);
     var parse =
         subject.getServer().getCommandManager().getDispatcher().parse(d.expanded(), subject);

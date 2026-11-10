@@ -98,6 +98,14 @@ public class DedicatedServerTests implements ModInitializer {
                               })));
           d.register(
               literal("sctcontainer").executes(c -> 20).then(literal("allowed").executes(c -> 21)));
+          d.register(
+              literal("/sctwand")
+                  .executes(
+                      c -> {
+                        throw new AssertionError("Blocked slash literal executed");
+                      }));
+          d.register(literal("/scthidden").executes(c -> 31));
+          d.register(literal("/sctoriginal").executes(c -> 32));
           d.register(literal("sctfirst").executes(c -> 11));
           d.register(literal("sctsecond").executes(c -> 12));
           d.register(
@@ -221,6 +229,49 @@ public class DedicatedServerTests implements ModInitializer {
     check(
         root.getChild("sctcontainer").getChild("allowed") != null,
         "Explicit child override visible");
+    check(
+        root.getChild("/sctwand") == null,
+        "WorldEdit-style slash literal absent from command tree");
+    check(root.getChild("/scthidden") == null, "HIDE slash literal absent from tree");
+    check(
+        !CommandExecutionGuard.allow(source, "/sctwand"), "WorldEdit-style native command blocked");
+    invoke("/sctwand");
+    check(
+        server.getCommandManager().getDispatcher().execute("/scthidden", source) == 31,
+        "HIDE preserves native slash execution");
+    check(
+        mod.executeAlias(source, "sctslashalias") == 32,
+        "Replacement preserves original slash literal");
+    var noPrefix =
+        new com.mojang.brigadier.suggestion.SuggestionsBuilder("", 0).suggest("/sctwand").build();
+    check(
+        mod.filterSuggestions(source, "", noPrefix).getList().isEmpty(),
+        "Native slash suggestion without chat prefix filtered");
+    var chatReader = new com.mojang.brigadier.StringReader("/sctmoney ex");
+    chatReader.skip();
+    var chatSuggestions =
+        dispatcher.getCompletionSuggestions(dispatcher.parse(chatReader, source)).join();
+    check(
+        chatSuggestions.getList().stream()
+            .anyMatch(x -> x.apply("/sctmoney ex").equals("/sctmoney example")),
+        "Alias suggestion offsets preserve chat slash");
+    var supplied =
+        new com.mojang.brigadier.suggestion.SuggestionsBuilder("/", 1)
+            .suggest("/sctwand")
+            .suggest("sctvisible")
+            .build();
+    var filtered = mod.filterSuggestions(source, "/", supplied);
+    check(
+        filtered.getList().stream().noneMatch(x -> x.getText().equals("/sctwand")),
+        "Double-slash server suggestion filtered");
+    check(
+        filtered.getList().stream().anyMatch(x -> x.getText().equals("sctvisible")),
+        "Normal slash-prefix suggestion retained");
+    check(
+        com.shirokai.commands.util.CommandPath.canonical(
+                com.shirokai.commands.util.CommandPath.fromUser("//sctwand"))
+            .equals("/sctwand"),
+        "Admin notation preserves one native slash");
     check(root.getChild("scthidden") == null, "Hidden node absent from packet");
     check(root.getChild("sctblocked") == null, "Blocked node absent from packet");
     check(root.getChild("sctbalance") == null, "Replaced node absent from packet");

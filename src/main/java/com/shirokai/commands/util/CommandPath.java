@@ -6,9 +6,13 @@ public final class CommandPath {
   private CommandPath() {}
 
   public static String clean(String s) {
-    s = s.stripLeading();
-    while (s.startsWith("/")) s = s.substring(1);
-    return s;
+    return s.stripLeading();
+  }
+
+  /** Convert chat notation once: /help -> help, //wand -> /wand. Never use on native nodes. */
+  public static String fromUser(String input) {
+    String path = clean(input);
+    return path.startsWith("/") ? path.substring(1) : path;
   }
 
   public static String canonical(String s) {

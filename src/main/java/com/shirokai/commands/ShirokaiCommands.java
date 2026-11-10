@@ -258,7 +258,11 @@ public final class ShirokaiCommands implements ModInitializer {
   public Suggestions filterSuggestions(
       ServerCommandSource source, String input, Suggestions suggestions) {
     var kept = new ArrayList<Suggestion>();
-    for (var s : suggestions.getList()) if (visible(source, s.apply(input))) kept.add(s);
+    for (var s : suggestions.getList()) {
+      String candidate = s.apply(input);
+      if (input.startsWith("/")) candidate = CommandPath.fromUser(candidate);
+      if (visible(source, candidate)) kept.add(s);
+    }
     return new Suggestions(suggestions.getRange(), kept);
   }
 

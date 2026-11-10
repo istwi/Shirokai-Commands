@@ -2,6 +2,8 @@
 
 ## 1.0.0
 
+Correção do build de testes: preserva barras nativas de comandos como `//wand`, distingue entrada do chat dos nós Brigadier e corrige offsets de sugestões de aliases com `/`.
+
 Implementação inicial para Fabric 1.21.1 / Java 21:
 
 - Políticas HIDE, BLOCK, REPLACE e ALLOW, whitelist e permissões por regra.

@@ -13,6 +13,9 @@ config = run / 'config' / 'shirokai-commands.json'
 config.parent.mkdir(parents=True, exist_ok=True)
 commands = {
     'scthidden': {'mode': 'hide'},
+    '/sctwand': {'mode': 'block'},
+    '/scthidden': {'mode': 'hide'},
+    '/sctoriginal': {'mode': 'replace', 'alias': 'sctslashalias'},
     'sctcontainer': {'mode': 'block'},
     'sctcontainer allowed': {'mode': 'allow'},
     'sctblocked': {'mode': 'block'},
