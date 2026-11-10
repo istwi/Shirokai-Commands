@@ -9,7 +9,11 @@ import java.util.*;
 /** Immutable, cosmetic argument policy. The caller supplies the live online-name snapshot. */
 public final class TabSuggestionFilter {
   private record Rule(
-      List<String> path, int argumentIndex, List<String> prefixes, boolean onlineOnly) {}
+      List<String> path,
+      int argumentIndex,
+      List<String> prefixes,
+      boolean onlineOnly,
+      boolean hideAll) {}
 
   private record Token(String value, int start, int end) {}
 
@@ -25,7 +29,8 @@ public final class TabSuggestionFilter {
                         List.of(f.command.split(" ")),
                         f.argumentIndex,
                         List.copyOf(f.hidePrefixes),
-                        f.onlinePlayersOnly))
+                        f.onlinePlayersOnly,
+                        f.hideAll))
             .toList();
     needsOnlinePlayers = rules.stream().anyMatch(Rule::onlineOnly);
   }
@@ -50,6 +55,7 @@ public final class TabSuggestionFilter {
       Token value = tokens.get(argument);
       // Do not filter a previously typed recipient while suggesting a currency/message later.
       if (start >= value.end() || end <= value.start()) continue;
+      if (rule.hideAll()) return false;
       if (rule.prefixes().stream().anyMatch(value.value()::startsWith)) return false;
       if (rule.onlineOnly()
           && !onlineNamesLowercase.contains(value.value().toLowerCase(Locale.ROOT))) return false;

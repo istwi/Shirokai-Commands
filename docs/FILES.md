@@ -49,6 +49,7 @@ src/main/resources/fabric.mod.json
 src/main/resources/shirokai-commands.mixins.json
 src/test/java/com/shirokai/commands/BrigadierTest.java
 src/test/java/com/shirokai/commands/CommandPathTest.java
+src/test/java/com/shirokai/commands/HideAllSuggestionsTest.java
 src/test/java/com/shirokai/commands/LuckPermsPermissionTest.java
 src/test/java/com/shirokai/commands/OnlinePlayersOnlyTest.java
 src/test/java/com/shirokai/commands/PolicyTest.java

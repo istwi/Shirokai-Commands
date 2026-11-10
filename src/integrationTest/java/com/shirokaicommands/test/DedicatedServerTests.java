@@ -133,6 +133,28 @@ public class DedicatedServerTests implements ModInitializer {
                                                               .equals("impactor:cash")
                                                           ? 43
                                                           : 44)))));
+          d.register(
+              literal("sctafterpay")
+                  .then(
+                      argument(
+                              "amount",
+                              com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                          .then(
+                              argument("target", StringArgumentType.word())
+                                  .suggests((ctx, b) -> playerNames(b))
+                                  .then(
+                                      argument("currency", StringArgumentType.word())
+                                          .suggests(
+                                              (ctx, b) ->
+                                                  b.suggest("cash")
+                                                      .suggest("tokens")
+                                                      .suggest("impactor:cash")
+                                                      .buildFuture())
+                                          .executes(ctx -> 46)
+                                          .then(
+                                              argument("extra", StringArgumentType.word())
+                                                  .suggests((ctx, b) -> playerNames(b))
+                                                  .executes(ctx -> 47))))));
           d.register(literal("sctaliaspay").redirect(pay));
           d.register(literal("economy:sctpay").redirect(pay));
           d.register(literal("scteconomy").then(literal("pay").redirect(pay)));
@@ -443,6 +465,22 @@ public class DedicatedServerTests implements ModInitializer {
       check(
           dispatcher.execute("sctmsg Offline hello", source) == 45,
           "Online filter does not change message command execution");
+      check(
+          requestSuggestions("/sctafterpay 10 PolicyTest cash ").getList().isEmpty(),
+          "No suggestions after currency with hideAll on fourth argument");
+      check(
+          requestSuggestions("/sctafterpay 10 ").getList().stream()
+              .anyMatch(s -> s.getText().equals("ALICE")),
+          "hideAll keeps player suggestions before currency");
+      check(
+          requestSuggestions("/sctafterpay 10 PolicyTest ").getList().stream()
+              .map(s -> s.getText())
+              .collect(java.util.stream.Collectors.toSet())
+              .equals(Set.of("cash", "tokens")),
+          "hideAll keeps currency suggestions in third argument");
+      check(
+          dispatcher.execute("sctafterpay 10 PolicyTest cash Server", source) == 47,
+          "hideAll does not block manual extra argument execution");
       var empty =
           new com.mojang.brigadier.suggestion.Suggestions(
               com.mojang.brigadier.context.StringRange.at(playerInput.length()), List.of());

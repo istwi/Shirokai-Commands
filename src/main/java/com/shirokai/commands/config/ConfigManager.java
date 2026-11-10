@@ -38,10 +38,12 @@ public final class ConfigManager {
     if (filters == null || !filters.isJsonArray()) return;
     for (JsonElement entry : filters.getAsJsonArray()) {
       if (!entry.isJsonObject()) continue;
-      JsonElement value = entry.getAsJsonObject().get("onlinePlayersOnly");
-      if (value != null && (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()))
-        throw new IllegalArgumentException(
-            "tabFilters.onlinePlayersOnly must be a JSON boolean (true or false)");
+      for (String key : List.of("onlinePlayersOnly", "hideAll")) {
+        JsonElement value = entry.getAsJsonObject().get(key);
+        if (value != null && (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()))
+          throw new IllegalArgumentException(
+              "tabFilters." + key + " must be a JSON boolean (true or false)");
+      }
     }
   }
 
@@ -74,11 +76,11 @@ public final class ConfigManager {
           || filter.argumentIndex < 1
           || filter.argumentIndex > 64
           || filter.hidePrefixes == null
-          || (!filter.onlinePlayersOnly && filter.hidePrefixes.isEmpty())
+          || (!filter.onlinePlayersOnly && !filter.hideAll && filter.hidePrefixes.isEmpty())
           || filter.hidePrefixes.stream().anyMatch(prefix -> prefix == null || prefix.isEmpty()))
         throw new IllegalArgumentException(
             "Invalid tabFilter: specify native command, argumentIndex (1..64), and "
-                + "onlinePlayersOnly: true or nonempty hidePrefixes");
+                + "onlinePlayersOnly: true, hideAll: true, or nonempty hidePrefixes");
     }
     Set<String> aliases = new HashSet<>();
     Set<String> ids = new HashSet<>();

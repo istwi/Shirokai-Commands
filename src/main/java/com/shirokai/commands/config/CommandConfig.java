@@ -14,6 +14,7 @@ public final class CommandConfig {
     public String command;
     public int argumentIndex;
     public boolean onlinePlayersOnly = false;
+    public boolean hideAll = false;
     public List<String> hidePrefixes = new ArrayList<>();
   }
 

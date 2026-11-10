@@ -155,6 +155,22 @@ Essa opção **filtra sugestões, não bloqueia execução**. Se alguém digitar
 
 Após trocar o jar, reinicie o servidor. Para alterações posteriores somente no JSON, use `/sc reload`. Configuração inválida mantém a última versão válida em memória.
 
+## Não mostrar nenhuma sugestão após a moeda
+
+Para `/pay <valor> <jogador> <moeda>` terminar as sugestões na moeda, use `hideAll: true` no quarto argumento. Mantenha os filtros das posições anteriores:
+
+```json
+"tabFilters": [
+  {"command": "pay", "argumentIndex": 2, "onlinePlayersOnly": true},
+  {"command": "pay", "argumentIndex": 3, "hidePrefixes": ["impactor:"]},
+  {"command": "pay", "argumentIndex": 4, "hideAll": true}
+]
+```
+
+`hideAll` é opcional e tem padrão `false`. Quando ativado, remove **todas** as sugestões que editam a posição configurada, inclusive nomes online, `Server` e seletores. Não precisa de `hidePrefixes` nem `onlinePlayersOnly`; é uma condição ativa por si só. Não modifica argumentos anteriores, outros comandos ou a execução manual. Não bloqueia argumentos extras: essa decisão permanece no comando original. A opção vale para respostas Brigadier do servidor, não para sugestões criadas inteiramente no cliente.
+
+Depois de instalar o jar que suporta a opção, reinicie o servidor. Alterações posteriores do JSON podem usar `/sc reload`.
+
 ## Comandos com duas barras (WorldEdit)
 
 Use a notação completa do chat nos comandos administrativos:

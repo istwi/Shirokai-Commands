@@ -8,6 +8,8 @@ Novo filtro opcional `tabFilters` para ocultar valores de argumentos por prefixo
 
 Novo `onlinePlayersOnly` opcional em `tabFilters`: interseção das sugestões originais com jogadores conectados, comparação sem distinguir caixa, metadados preservados e escopo pelo range do argumento. Mantém compatibilidade com filtros por prefixo e não altera a execução.
 
+Novo `hideAll` em `tabFilters` para deixar uma posição sem sugestões, inclusive jogadores online, sem interferir nas posições anteriores ou na execução manual.
+
 Implementação inicial para Fabric 1.21.1 / Java 21:
 
 - Políticas HIDE, BLOCK, REPLACE e ALLOW, whitelist e permissões por regra.
