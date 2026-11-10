@@ -26,6 +26,7 @@ Aceite a EULA do Minecraft somente se estiver de acordo. O runner de integraçã
 
 - `config/ConfigManager`: validação, cópia de snapshots, backup e gravação atômica.
 - `filter/CommandRuleEngine`: política compartilhada por execução, árvore e sugestões; lookup por prefixos de tokens, sem varreduras em ticks.
+- `filter/TabSuggestionFilter`: filtros cosméticos por argumento/range, prefixos e snapshot de nomes online; não altera execução.
 - `filter/CommandFilter`: cópia filtrada da árvore; não modifica o dispatcher original.
 - `security/CommandExecutionGuard`: entrada do jogador e cadeias de redirecionamento.
 - `alias/AliasManager`: registro, encaminhamento de argumentos e sugestões.

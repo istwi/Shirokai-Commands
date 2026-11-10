@@ -259,12 +259,27 @@ public final class ShirokaiCommands implements ModInitializer {
 
   public Suggestions filterSuggestions(
       ServerCommandSource source, String input, Suggestions suggestions) {
+    if (suggestions.getList().isEmpty()) return suggestions;
+    // The existing completion interceptor schedules this method on the server thread.
+    Set<String> onlineNames =
+        argumentSuggestions.requiresOnlinePlayers()
+            ? source.getServer().getPlayerManager().getPlayerList().stream()
+                .map(p -> p.getGameProfile().getName().toLowerCase(Locale.ROOT))
+                .collect(java.util.stream.Collectors.toUnmodifiableSet())
+            : Set.of();
     var kept = new ArrayList<Suggestion>();
-    for (var s : suggestions.getList()) {
-      String candidate = s.apply(input);
-      if (input.startsWith("/")) candidate = CommandPath.fromUser(candidate);
-      if (visible(source, candidate)
-          && argumentSuggestions.visible(decision(source, candidate).expanded())) kept.add(s);
+    for (var suggestion : suggestions.getList()) {
+      String candidate = suggestion.apply(input);
+      int prefix = input.startsWith("/") ? 1 : 0;
+      if (prefix == 1) candidate = CommandPath.fromUser(candidate);
+      if (!visible(source, candidate)) continue;
+      String expanded = decision(source, candidate).expanded();
+      int offset = expanded.length() - candidate.length() - prefix;
+      int start = Math.max(0, suggestion.getRange().getStart() + offset);
+      int end =
+          Math.max(
+              start, suggestion.getRange().getStart() + suggestion.getText().length() + offset);
+      if (argumentSuggestions.visible(expanded, start, end, onlineNames)) kept.add(suggestion);
     }
     return new Suggestions(suggestions.getRange(), kept);
   }

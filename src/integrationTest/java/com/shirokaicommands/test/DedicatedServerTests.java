@@ -107,30 +107,48 @@ public class DedicatedServerTests implements ModInitializer {
                       }));
           d.register(literal("/scthidden").executes(c -> 31));
           d.register(literal("/sctoriginal").executes(c -> 32));
+          var pay =
+              d.register(
+                  literal("sctpay")
+                      .then(
+                          argument(
+                                  "amount",
+                                  com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                              .then(
+                                  argument("target", StringArgumentType.word())
+                                      .suggests((ctx, b) -> playerNames(b))
+                                      .then(
+                                          argument("currency", StringArgumentType.greedyString())
+                                              .suggests(
+                                                  (ctx, b) ->
+                                                      b.suggest("cash")
+                                                          .suggest("impactor:cash")
+                                                          .suggest("tokens")
+                                                          .suggest("impactor:tokens")
+                                                          .suggest("impactor:dollars")
+                                                          .buildFuture())
+                                              .executes(
+                                                  ctx ->
+                                                      StringArgumentType.getString(ctx, "currency")
+                                                              .equals("impactor:cash")
+                                                          ? 43
+                                                          : 44)))));
+          d.register(literal("sctaliaspay").redirect(pay));
+          d.register(literal("economy:sctpay").redirect(pay));
+          d.register(literal("scteconomy").then(literal("pay").redirect(pay)));
           d.register(
-              literal("sctpay")
+              literal("sctplayers")
                   .then(
-                      argument(
-                              "amount",
-                              com.mojang.brigadier.arguments.IntegerArgumentType.integer(1))
+                      argument("target", StringArgumentType.word())
+                          .suggests((ctx, b) -> playerNames(b))));
+          d.register(
+              literal("sctmsg")
+                  .then(
+                      argument("target", StringArgumentType.word())
+                          .suggests((ctx, b) -> playerNames(b))
                           .then(
-                              argument("target", StringArgumentType.word())
-                                  .then(
-                                      argument("currency", StringArgumentType.greedyString())
-                                          .suggests(
-                                              (ctx, b) ->
-                                                  b.suggest("cash")
-                                                      .suggest("impactor:cash")
-                                                      .suggest("tokens")
-                                                      .suggest("impactor:tokens")
-                                                      .suggest("impactor:dollars")
-                                                      .buildFuture())
-                                          .executes(
-                                              ctx ->
-                                                  StringArgumentType.getString(ctx, "currency")
-                                                          .equals("impactor:cash")
-                                                      ? 43
-                                                      : 44)))));
+                              argument("message", StringArgumentType.greedyString())
+                                  .executes(ctx -> 45))));
           d.register(literal("sctfirst").executes(c -> 11));
           d.register(literal("sctsecond").executes(c -> 12));
           d.register(
@@ -333,6 +351,107 @@ public class DedicatedServerTests implements ModInitializer {
     check(
         dispatcher.execute("sctpay 10 a cash", source) == 44,
         "Plain currency still manually executable");
+    var actors =
+        List.of(player, onlinePlayer("Alice"), onlinePlayer("Bob"), onlinePlayer("Hidden"));
+    var connected = server.getPlayerManager().getPlayerList();
+    connected.addAll(actors);
+    try {
+      String playerInput = "/sctpay 10 ";
+      var reader = new com.mojang.brigadier.StringReader(playerInput);
+      reader.skip();
+      var original = dispatcher.getCompletionSuggestions(dispatcher.parse(reader, source)).join();
+      var offered =
+          original.getList().stream()
+              .map(com.mojang.brigadier.suggestion.Suggestion::getText)
+              .toList();
+      var expected =
+          offered.stream()
+              .filter(
+                  name ->
+                      Set.of("alice", "bob", "policytest").contains(name.toLowerCase(Locale.ROOT)))
+              .toList();
+      var actual = requestSuggestions(playerInput);
+      var names =
+          actual.getList().stream()
+              .map(com.mojang.brigadier.suggestion.Suggestion::getText)
+              .toList();
+      check(
+          names.equals(expected),
+          "Online-only response preserves original provider order and casing");
+      check(names.contains("PolicyTest"), "Requester is retained when originally suggested");
+      check(
+          !names.contains("Hidden"), "Connected player omitted by original provider is not added");
+      check(
+          names.stream()
+              .noneMatch(
+                  name -> name.startsWith("@") || name.equals("Server") || name.equals("Offline")),
+          "Selectors, Server and offline players removed");
+      check(
+          actual.getRange().equals(original.getRange()),
+          "Online-only response keeps Brigadier replacement range");
+      check(
+          actual.getList().stream()
+              .filter(s -> s.getText().equals("ALICE"))
+              .findFirst()
+              .orElseThrow()
+              .getTooltip()
+              .getString()
+              .equals("Original tooltip"),
+          "Online-only response preserves suggestion tooltip");
+      check(
+          requestSuggestions("/sctplayers ").getList().stream()
+              .anyMatch(s -> s.getText().equals("Server")),
+          "Unconfigured command suggestions remain unchanged");
+      check(
+          requestSuggestions("/economy:sctpay 10 ").getList().stream()
+              .map(s -> s.getText())
+              .toList()
+              .equals(expected),
+          "Namespaced command online filter works");
+      check(
+          requestSuggestions("/scteconomy pay 10 ").getList().stream()
+              .map(s -> s.getText())
+              .toList()
+              .equals(expected),
+          "Subcommand path online filter works");
+      check(
+          requestSuggestions("/sctmsg ").getList().stream()
+              .map(s -> s.getText())
+              .toList()
+              .equals(expected),
+          "First argument online filter works");
+      check(
+          requestSuggestions("/sctsend 10 ").getList().stream()
+              .map(s -> s.getText())
+              .toList()
+              .equals(expected),
+          "Alias argument offsets expand to original online filter");
+      connected.remove(actors.get(2));
+      check(
+          requestSuggestions(playerInput).getList().stream()
+              .noneMatch(s -> s.getText().equals("bob")),
+          "Disconnected player removed at next response");
+      check(
+          requestSuggestions("/sctpay 10 Offline ").getList().stream()
+              .map(s -> s.getText())
+              .collect(java.util.stream.Collectors.toSet())
+              .equals(Set.of("cash", "tokens")),
+          "Currency filter works after manually typed offline recipient");
+      check(
+          dispatcher.execute("sctpay 10 Offline cash", source) == 44,
+          "Online filter does not change payment command execution");
+      check(
+          dispatcher.execute("sctmsg Offline hello", source) == 45,
+          "Online filter does not change message command execution");
+      var empty =
+          new com.mojang.brigadier.suggestion.Suggestions(
+              com.mojang.brigadier.context.StringRange.at(playerInput.length()), List.of());
+      check(
+          mod.filterSuggestions(source, playerInput, empty) == empty,
+          "Empty suggestions preserved without adding online names");
+    } finally {
+      connected.removeAll(actors);
+    }
     int beforeInternal = executions;
     server.getCommandManager().executeWithPrefix(source, "sctblocked");
     check(executions == beforeInternal + 1, "Internal player command untouched by default");
@@ -386,6 +505,41 @@ public class DedicatedServerTests implements ModInitializer {
       stage = 0;
       server.stop(false);
     }
+  }
+
+  private static java.util.concurrent.CompletableFuture<com.mojang.brigadier.suggestion.Suggestions>
+      playerNames(com.mojang.brigadier.suggestion.SuggestionsBuilder b) {
+    return b.suggest("@a")
+        .suggest("@p")
+        .suggest("@r")
+        .suggest("@s")
+        .suggest("@e")
+        .suggest("Server")
+        .suggest("Offline")
+        .suggest("ALICE", net.minecraft.text.Text.literal("Original tooltip"))
+        .suggest("bob")
+        .suggest("PolicyTest")
+        .buildFuture();
+  }
+
+  private ServerPlayerEntity onlinePlayer(String name) {
+    var p =
+        new ServerPlayerEntity(
+            server,
+            server.getOverworld(),
+            new GameProfile(UUID.randomUUID(), name),
+            SyncedClientOptions.createDefault());
+    p.networkHandler = new RecordingHandler(server, p);
+    return p;
+  }
+
+  private com.mojang.brigadier.suggestion.Suggestions requestSuggestions(String input) {
+    handler.completion = null;
+    handler.onRequestCommandCompletions(
+        new net.minecraft.network.packet.c2s.play.RequestCommandCompletionsC2SPacket(72, input));
+    if (handler.completion == null)
+      throw new AssertionError("No suggestions response for " + input);
+    return handler.completion.getSuggestions();
   }
 
   private void invoke(String command) throws Exception {

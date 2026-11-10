@@ -13,6 +13,7 @@ public final class CommandConfig {
   public static class TabFilter {
     public String command;
     public int argumentIndex;
+    public boolean onlinePlayersOnly = false;
     public List<String> hidePrefixes = new ArrayList<>();
   }
 

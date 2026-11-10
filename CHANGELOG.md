@@ -6,6 +6,8 @@ Correção do build de testes: preserva barras nativas de comandos como `//wand`
 
 Novo filtro opcional `tabFilters` para ocultar valores de argumentos por prefixo e posição, por exemplo `impactor:` no terceiro argumento de `/pay`, sem alterar a execução.
 
+Novo `onlinePlayersOnly` opcional em `tabFilters`: interseção das sugestões originais com jogadores conectados, comparação sem distinguir caixa, metadados preservados e escopo pelo range do argumento. Mantém compatibilidade com filtros por prefixo e não altera a execução.
+
 Implementação inicial para Fabric 1.21.1 / Java 21:
 
 - Políticas HIDE, BLOCK, REPLACE e ALLOW, whitelist e permissões por regra.

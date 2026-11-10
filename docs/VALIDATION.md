@@ -8,18 +8,18 @@ Verificação local em 10/11/2026. Código e jar de testes enviados à branch `m
 | --- | --- |
 | JDK 21, Loom 1.8.13, Minecraft 1.21.1, Yarn build.3 | Compilação realizada |
 | `./gradlew build` | Sucesso; jar remapeado e fontes gerados |
-| Testes JUnit | 58 testes, zero falhas/erros/skips |
-| `python3 scripts/integration-test.py` | Servidor Fabric dedicado: 55 assertions aprovadas |
+| Testes JUnit | 83 testes, zero falhas/erros/skips |
+| `python3 scripts/integration-test.py` | Servidor Fabric dedicado: 71 assertions aprovadas |
 | `./gradlew runServer --args nogui` | Inicialização normal atingiu `Done`, sem mod auxiliar de teste; encerramento limpo |
 | Metadados do jar | Ambiente `server`; mod auxiliar de teste ausente |
 | Checksums Gradle e JDK | Conferidos antes de usar os arquivos baixados |
 | GitHub Actions | Arquivos criados; execução remota ainda não realizada |
 
-Os 58 testes JUnit abrangem: modos HIDE/BLOCK/REPLACE, ALLOW e prioridade de segurança, bypass, whitelist, permissões de regra/alias, namespaces, limites de palavras, ciclos/duplicações, JSON inválido, backup, auditoria sem argumentos sensíveis, filtragem Brigadier e contrato de consulta da API LuckPerms.
+Os 83 testes JUnit abrangem: modos HIDE/BLOCK/REPLACE, ALLOW e prioridade de segurança, bypass, whitelist, permissões de regra/alias, namespaces, limites de palavras, ciclos/duplicações, JSON inválido, backup, auditoria sem argumentos sensíveis, filtragem Brigadier e contrato de consulta da API LuckPerms.
 
 Os seis testes da API LuckPerms usam interfaces oficiais com proxies controlados: TRUE, FALSE, UNDEFINED, usuário não carregado, QueryOptions contextual e fallback estático. **Não comprovam execução com o plugin LuckPerms instalado**, nem grupos/herança do plugin real.
 
-As 55 assertions dedicadas exercitam as classes reais do Minecraft/Fabric e mixins carregados: bloqueio da entrada não assinada da rede, comando oculto executável, namespace, redirect alternativo, `execute run`, aliases com fonte do jogador e argumentos, sugestões (inclusive após espaço), subcomandos, prefixo fixo dinâmico, subaliases irmãos, exigência vanilla original, árvore efetiva de `CommandTreeS2CPacket` (incluindo ancestral bloqueado como contêiner não executável para um filho permitido), whitelist, backup, reload, JSON inválido, permissões administrativas, console e proteção opcional de chamadas internas. O jogador é simulado e o handler captura pacotes; não há cliente autenticado nesse teste.
+As 71 assertions dedicadas exercitam as classes reais do Minecraft/Fabric e mixins carregados: bloqueio da entrada não assinada da rede, comando oculto executável, namespace, redirect alternativo, `execute run`, aliases com fonte do jogador e argumentos, sugestões (inclusive após espaço), subcomandos, prefixo fixo dinâmico, subaliases irmãos, exigência vanilla original, árvore efetiva de `CommandTreeS2CPacket` (incluindo ancestral bloqueado como contêiner não executável para um filho permitido), whitelist, backup, reload, JSON inválido, permissões administrativas, console e proteção opcional de chamadas internas. O jogador é simulado e o handler captura pacotes; não há cliente autenticado nesse teste.
 
 O servidor de testes funciona em modo offline/loopback. Houve aviso de consulta às chaves públicas Mojang por DNS indisponível no processo Java; autenticação online não foi validada. Isso não impediu as assertions locais nem o encerramento limpo.
 
@@ -50,3 +50,11 @@ A correção diferencia a barra do chat das barras nativas do Brigadier. Os test
 ## Filtros de argumentos do TAB
 
 `tabFilters` foi validado com 14 testes unitários de escopo por comando/posição, valores simples e com namespace, aspas, whitespace, limites de palavras e configuração inválida. A integração dedicada usa um provedor de moedas simulado e envia uma requisição real `RequestCommandCompletionsC2SPacket` pelo handler: o pacote de resposta preserva apenas `cash`/`tokens`, mantém o range de substituição e a execução manual das duas formas permanece funcional. Não é uma instalação real do Impactor. A consulta ao código oficial `NickImpact/Impactor`, branch `1.21.1`, em `CurrencyParser.suggestionsFuture` confirmou que o parser gera as duas formas de cada moeda; não foi encontrada opção correspondente em `economy.conf`.
+
+## Jogadores online nas sugestões
+
+A extensão `onlinePlayersOnly` foi validada por 25 novos testes unitários e 16 verificações adicionais dentro do servidor dedicado. Cobrem perfis online/offline, conta fictícia Server, seletores, caixa, próprio jogador, comandos não configurados, índices, subcomandos, namespace, aliases e offsets, composição com `hidePrefixes`, JSON legado, booleano estrito, desconexão e respostas vazias.
+
+Os testes dedicados inserem perfis simulados na lista real do `PlayerManager` durante a verificação e os removem em `finally`. Requisições passam pelo handler real de completions e mixin existente. As respostas preservam ordem/range/tooltip/caixa; um conectado não oferecido pelo provedor não é adicionado. Comandos de pagamento e mensagem simulados continuam executando com destinatários offline digitados manualmente. Nenhuma dependência de Impactor foi adicionada.
+
+`./gradlew test` e `./gradlew build` foram executados com sucesso. Impactor 5.3.5 instalado, seu provedor real de sugestões e clientes conectados ao servidor do usuário ainda não foram executados neste ambiente; a validação é do caminho Brigadier/Fabric com comandos/provedores de teste.

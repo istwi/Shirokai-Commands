@@ -111,6 +111,50 @@ Execute `/sc reload` e reabra o chat. O filtro remove as sugestões que começam
 
 Essa função trata respostas de sugestões enviadas pelo servidor, portanto não exige módulo cliente. Sugestões criadas inteiramente por um mod local continuam fora do controle do servidor.
 
+## Sugerir somente jogadores online
+
+O filtro opcional `onlinePlayersOnly` mantém somente sugestões que correspondam, sem distinguir maiúsculas/minúsculas, ao nome real (`GameProfile`) de um jogador conectado no momento de processar a resposta. Ele preserva o texto original, a ordem, os ranges e os tooltips. O jogador que digitou o comando não é excluído se o próprio provedor o sugerir.
+
+Exemplo para `/pay <valor> <jogador> <moeda>`, preservando também o filtro de moedas:
+
+```json
+"tabFilters": [
+  {
+    "command": "pay",
+    "argumentIndex": 2,
+    "onlinePlayersOnly": true,
+    "hidePrefixes": ["@"]
+  },
+  {
+    "command": "pay",
+    "argumentIndex": 3,
+    "hidePrefixes": ["impactor:"]
+  },
+  {
+    "command": "tpa",
+    "argumentIndex": 1,
+    "onlinePlayersOnly": true
+  },
+  {
+    "command": "msg",
+    "argumentIndex": 1,
+    "onlinePlayersOnly": true
+  }
+]
+```
+
+Adicione a lista na raiz de `config/shirokai-commands.json`; se ela já existir, acrescente as entradas sem duplicar a chave `tabFilters`. A lista acima é ilustrativa: nenhum desses filtros é ativado por padrão. `hidePrefixes` é opcional com `onlinePlayersOnly: true`; também é permitido usar apenas prefixos, como antes. Uma entrada sem nenhuma condição ativa é rejeitada. `onlinePlayersOnly` deve ser um booleano JSON (`true`/`false`), com padrão `false`.
+
+`argumentIndex` conta a partir de 1 após o caminho configurado. Para `/economy pay <valor> <jogador>`, use `"command": "economy pay"` e `"argumentIndex": 2`. O filtro respeita limites de tokens, diferencia `pay` de `payroll`, trata namespaces de raiz pela política normal e traduz os offsets dos aliases para o original. Apenas o argumento abrangido pelo range da sugestão é filtrado; um destinatário offline digitado manualmente não interfere nas sugestões de moeda ou mensagem que vêm depois.
+
+Seletores (`@a`, `@r`, `@s`, `@p`, `@e`), contas fictícias como `Server` e nomes offline são removidos por não corresponderem aos nomes reais conectados. O filtro **nunca acrescenta jogadores**: se o provedor original não oferecer um nome por permissão, visibilidade ou vanish, o Shirokai também não o oferece. Uma conta real conectada chamada `Server` é um nome real e é tratada como qualquer outro jogador. Nicks decorativos e nomes de exibição que não correspondam ao GameProfile são excluídos.
+
+A lista do `PlayerManager` é lida uma vez por resposta, na thread do servidor, depois da conclusão do provedor original. Cada resposta usa um snapshot atual, sem cache entre pedidos; desconexões passam a valer no próximo processamento. Nenhuma varredura por tick nem modificação de registros de outros mods é introduzida.
+
+Essa opção **filtra sugestões, não bloqueia execução**. Se alguém digitar manualmente um offline, `Server` ou um seletor, a decisão continua com o comando original e suas permissões; saldos e destinatários não são alterados pelo Shirokai. Ela funciona com argumentos de comandos Minecraft/Fabric/outros mods que passem pelas sugestões Brigadier do servidor, sem dependência de Impactor. Sugestões calculadas apenas no cliente, respostas que evitem esse handler e listas já armazenadas no cliente não são controladas por esse filtro. Nenhuma compatibilidade específica com Impactor 5.3.5 é declarada como comprovada sem teste com o mod instalado.
+
+Após trocar o jar, reinicie o servidor. Para alterações posteriores somente no JSON, use `/sc reload`. Configuração inválida mantém a última versão válida em memória.
+
 ## Comandos com duas barras (WorldEdit)
 
 Use a notação completa do chat nos comandos administrativos:

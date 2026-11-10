@@ -22,11 +22,26 @@ public final class ConfigManager {
       return config;
     }
     try (var reader = Files.newBufferedReader(path)) {
-      CommandConfig config = gson.fromJson(reader, CommandConfig.class);
+      JsonElement json = JsonParser.parseReader(reader);
+      validateJsonTypes(json);
+      CommandConfig config = gson.fromJson(json, CommandConfig.class);
       validate(config);
       return config;
     } catch (RuntimeException e) {
       throw new IOException("Invalid config: " + e.getMessage(), e);
+    }
+  }
+
+  private static void validateJsonTypes(JsonElement json) {
+    if (!json.isJsonObject()) return;
+    JsonElement filters = json.getAsJsonObject().get("tabFilters");
+    if (filters == null || !filters.isJsonArray()) return;
+    for (JsonElement entry : filters.getAsJsonArray()) {
+      if (!entry.isJsonObject()) continue;
+      JsonElement value = entry.getAsJsonObject().get("onlinePlayersOnly");
+      if (value != null && (!value.isJsonPrimitive() || !value.getAsJsonPrimitive().isBoolean()))
+        throw new IllegalArgumentException(
+            "tabFilters.onlinePlayersOnly must be a JSON boolean (true or false)");
     }
   }
 
@@ -59,11 +74,11 @@ public final class ConfigManager {
           || filter.argumentIndex < 1
           || filter.argumentIndex > 64
           || filter.hidePrefixes == null
-          || filter.hidePrefixes.isEmpty()
+          || (!filter.onlinePlayersOnly && filter.hidePrefixes.isEmpty())
           || filter.hidePrefixes.stream().anyMatch(prefix -> prefix == null || prefix.isEmpty()))
         throw new IllegalArgumentException(
-            "Invalid tabFilter: specify native command, argumentIndex (1..64), and nonempty"
-                + " hidePrefixes");
+            "Invalid tabFilter: specify native command, argumentIndex (1..64), and "
+                + "onlinePlayersOnly: true or nonempty hidePrefixes");
     }
     Set<String> aliases = new HashSet<>();
     Set<String> ids = new HashSet<>();
